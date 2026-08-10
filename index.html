@@ -45,7 +45,7 @@
                 <div class="logo-icon"><i class="ri-robot-line"></i></div>
                 <div>
                     <h1 class="brand-name">Godoy FreshOps <span class="badge-ai">AI APP</span></h1>
-                    <p class="brand-subtitle">PWA Android • OCR & Teams Realtime</p>
+                    <p class="brand-subtitle hide-mobile">PWA Android • OCR & Teams Realtime</p>
                 </div>
             </div>
 
@@ -83,8 +83,15 @@
         <!-- Section 1: Ronda Diária (4 Setores Hospitalares Editáveis) -->
         <section class="ronda-section">
             <div class="ronda-header">
-                <h2><i class="ri-walk-line text-teal"></i> Ronda Diária / Primeira Ronda (4 Setores Editáveis)</h2>
-                <span class="ronda-badge">Pré-Requisito de Plantão</span>
+                <div>
+                    <h2><i class="ri-walk-line text-teal"></i> Ronda Diária (4 Setores Editáveis)</h2>
+                    <span class="ronda-badge">Pré-Requisito de Plantão</span>
+                </div>
+                <div class="ronda-header-actions">
+                    <button class="btn btn-whatsapp btn-sm" id="copyRondaWhatsAppBtn">
+                        <i class="ri-whatsapp-line"></i> Copiar Ronda p/ WhatsApp
+                    </button>
+                </div>
             </div>
 
             <div class="ronda-grid" id="rondaGrid">

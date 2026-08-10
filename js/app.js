@@ -1,5 +1,5 @@
 /**
- * Godoy FreshOps AI — Agente de Inteligência PWA, OCR Duplo (OCR.space Cloud + Tesseract.js), Ronda & Teams Realtime
+ * Godoy FreshOps AI — Agente de Inteligência PWA, OCR Duplo, Ronda & WhatsApp Formatting
  * Desenvolvido por Godoy Solutions in TECH para Caíque Eduardo
  */
 
@@ -118,6 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const themeToggleBtn = document.getElementById('themeToggleBtn');
     const themeIcon = document.getElementById('themeIcon');
     const enableNotificationsBtn = document.getElementById('enableNotificationsBtn');
+    const copyRondaWhatsAppBtn = document.getElementById('copyRondaWhatsAppBtn');
 
     // Modals
     const ticketModalBackdrop = document.getElementById('ticketModalBackdrop');
@@ -277,6 +278,37 @@ document.addEventListener('DOMContentLoaded', () => {
         saveRonda(ronda);
     };
 
+    // COPIAR RONDA DIÁRIA FORMATADA PARA WHATSAPP
+    if (copyRondaWhatsAppBtn) {
+        copyRondaWhatsAppBtn.addEventListener('click', () => {
+            const config = getApiConfig();
+            const analyst = config.analystName || 'Caíque Eduardo';
+            const dataHoje = new Date().toLocaleDateString('pt-BR');
+
+            let msg = `🏥 *RELATÓRIO DE RONDA DIÁRIA — SUPORTE TÉCNICO*\n`;
+            msg += `👤 *Analista:* ${analyst}\n`;
+            msg += `📅 *Data:* ${dataHoje} | *Turno:* Diurno (07h às 19h)\n`;
+            msg += `----------------------------------\n\n`;
+
+            ronda.forEach(r => {
+                const statusEmoji = r.status === 'OK' ? '🟢' : '🟡';
+                msg += `${statusEmoji} *${r.nome}*\n`;
+                msg += `   • *Status:* ${r.status === 'OK' ? '100% OK / Sem Anormalidades' : 'Com Pendência Técnica'}\n`;
+                msg += `   • *Obs:* ${r.obs || 'Sem alterações'}\n`;
+                msg += `   • *Validado com:* ${r.validado || 'Equipe do setor'}\n\n`;
+            });
+
+            msg += `----------------------------------\n`;
+            msg += `✅ *Ronda Diária Concluída com Sucesso!*`;
+
+            navigator.clipboard.writeText(msg).then(() => {
+                alert('✨ Resumo formal da Ronda Diária copiado com sucesso! Agora é só colar no WhatsApp.');
+            }).catch(err => {
+                console.error('Erro ao copiar', err);
+            });
+        });
+    }
+
     // OCR HYBRID ENGINE (OCR.space Cloud API + Tesseract.js Local Fallback)
     if (openOcrModalBtn) {
         openOcrModalBtn.addEventListener('click', () => {
@@ -325,7 +357,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let textExtracted = '';
 
-        // MOTOR 1: OCR.space Cloud API (API Oficial Gratuita)
         try {
             const formData = new FormData();
             formData.append('file', file);
@@ -350,7 +381,6 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn('OCR.space Cloud offline, acionando Tesseract:', cloudErr);
         }
 
-        // MOTOR 2: Tesseract.js (Fallback Local se o motor de nuvem falhar)
         if (!textExtracted && window.Tesseract) {
             try {
                 ocrStatusText.textContent = 'Lendo com o motor Tesseract local...';
@@ -382,7 +412,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         console.log('Texto OCR Extraído:', textExtracted);
 
-        // Regex para extração inteligente dos campos do Freshservice
         const matchNumber = textExtracted.match(/\[?(#?SR-\d{5,8}|#?\d{6}|SR-\d{5,8}|Ticket\s*#?\s*\d{5,8})\]?/i);
         const ticketNum = matchNumber ? matchNumber[1].replace('[', '').replace(']', '').replace(/Ticket/i, '').trim() : '#SR-312654';
 
@@ -394,7 +423,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         ocrModalBackdrop.classList.remove('active');
 
-        // Preenche o formulário
         ticketForm.reset();
         document.getElementById('ticketIdHidden').value = '';
         document.getElementById('ticketNumber').value = ticketNum.startsWith('#') ? ticketNum : '#' + ticketNum;
