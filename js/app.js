@@ -1,5 +1,5 @@
 /**
- * Godoy FreshOps AI — Agente de Inteligência PWA, OCR por Câmera/Print, Ronda & Notificações do Teams em Tempo Real
+ * Godoy FreshOps AI — Agente de Inteligência PWA, OCR por Print/Galeria/Ctrl+V, Ronda & Notificações do Teams em Tempo Real
  * Desenvolvido por Godoy Solutions in TECH para Caíque Eduardo
  */
 
@@ -132,6 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const openOcrModalBtn = document.getElementById('openOcrModalBtn');
     const closeOcrModalBtn = document.getElementById('closeOcrModalBtn');
     const cancelOcrModalBtn = document.getElementById('cancelOcrModalBtn');
+    const ocrDropzone = document.getElementById('ocrDropzone');
     const ocrFileInput = document.getElementById('ocrFileInput');
     const ocrPreviewContainer = document.getElementById('ocrPreviewContainer');
     const ocrPreviewImg = document.getElementById('ocrPreviewImg');
@@ -276,7 +277,7 @@ document.addEventListener('DOMContentLoaded', () => {
         saveRonda(ronda);
     };
 
-    // OCR SCANNER POR CÂMERA OU PRINT DE TELA (Tesseract.js)
+    // OCR SCANNER POR PRINT DE TELA (GALERIA, DROPZONE & CTRL+V PASTE)
     if (openOcrModalBtn) {
         openOcrModalBtn.addEventListener('click', () => {
             ocrPreviewContainer.style.display = 'none';
@@ -286,13 +287,32 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    if (ocrDropzone) {
+        ocrDropzone.addEventListener('click', () => ocrFileInput.click());
+    }
+
     closeOcrModalBtn.addEventListener('click', () => ocrModalBackdrop.classList.remove('active'));
     cancelOcrModalBtn.addEventListener('click', () => ocrModalBackdrop.classList.remove('active'));
 
-    ocrFileInput.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
+    // COLA DIRETA VIA CTRL+V NO NAVEGADOR
+    window.addEventListener('paste', (e) => {
+        const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+        for (let item of items) {
+            if (item.type.indexOf('image') !== -1) {
+                const blob = item.getAsFile();
+                processOcrFile(blob);
+                ocrModalBackdrop.classList.add('active');
+                break;
+            }
+        }
+    });
 
+    ocrFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) processOcrFile(file);
+    });
+
+    async function processOcrFile(file) {
         const reader = new FileReader();
         reader.onload = (event) => {
             ocrPreviewImg.src = event.target.result;
@@ -308,12 +328,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const result = await Tesseract.recognize(file, 'por', {
                     logger: m => {
                         if (m.status === 'recognizing text') {
-                            ocrStatusText.textContent = `Lendo texto do Freshservice: ${Math.round(m.progress * 100)}%`;
+                            ocrStatusText.textContent = `Lendo texto do print: ${Math.round(m.progress * 100)}%`;
                         }
                     }
                 });
 
                 const text = result.data.text || '';
+                console.log('OCR Extraído:', text);
+
                 const matchNumber = text.match(/\[?(#?SR-\d{5,8}|#?\d{6}|SR-\d{5,8})\]?/i);
                 const ticketNum = matchNumber ? matchNumber[1].replace('[', '').replace(']', '') : '#SR-312654';
 
@@ -332,7 +354,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('ticketSolution').value = solucaoTxt || 'Solução realizada pelo analista e validada.';
                 document.getElementById('ticketValidation').value = solicitante ? `Validado com ${solicitante}` : 'Validado no local';
 
-                modalFormTitle.innerHTML = '<i class="ri-camera-lens-line text-teal"></i> Ticket Extraído por OCR (Print/Câmera)';
+                modalFormTitle.innerHTML = '<i class="ri-screenshot-2-line text-teal"></i> Ticket Extraído por OCR (Print/Galeria)';
                 ticketModalBackdrop.classList.add('active');
             } else {
                 throw new Error('Tesseract library offline');
@@ -341,7 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Erro no OCR:', err);
             ocrStatusText.textContent = 'Erro ao ler imagem. Preencha manualmente.';
         }
-    });
+    }
 
     // Sync Freshservice API Tickets
     fetchApiTicketsBtn.addEventListener('click', async () => {
