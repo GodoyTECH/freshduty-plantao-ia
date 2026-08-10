@@ -1,5 +1,5 @@
 /**
- * Godoy FreshOps AI — Agente de Inteligência, Ronda Hospitalar & Gestão de Chamados
+ * Godoy FreshOps AI — Agente de Inteligência, OCR por Câmera/Print, Ronda & Gestão de Chamados
  * Desenvolvido por Godoy Solutions in TECH para Caíque Eduardo
  */
 
@@ -94,6 +94,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const cancelTicketModalBtn = document.getElementById('cancelTicketModalBtn');
     const ticketForm = document.getElementById('ticketForm');
     const modalFormTitle = document.getElementById('modalFormTitle');
+
+    // OCR Modal Elements
+    const ocrModalBackdrop = document.getElementById('ocrModalBackdrop');
+    const openOcrModalBtn = document.getElementById('openOcrModalBtn');
+    const closeOcrModalBtn = document.getElementById('closeOcrModalBtn');
+    const cancelOcrModalBtn = document.getElementById('cancelOcrModalBtn');
+    const ocrFileInput = document.getElementById('ocrFileInput');
+    const ocrPreviewContainer = document.getElementById('ocrPreviewContainer');
+    const ocrPreviewImg = document.getElementById('ocrPreviewImg');
+    const ocrStatusContainer = document.getElementById('ocrStatusContainer');
+    const ocrStatusText = document.getElementById('ocrStatusText');
 
     const teamsModalBackdrop = document.getElementById('teamsModalBackdrop');
     const openPasteTeamsModalBtn = document.getElementById('openPasteTeamsModalBtn');
@@ -198,6 +209,79 @@ document.addEventListener('DOMContentLoaded', () => {
         ronda[idx][field] = val;
         saveRonda(ronda);
     };
+
+    // OCR SCANNER POR CÂMERA OU PRINT DE TELA (Tesseract.js)
+    if (openOcrModalBtn) {
+        openOcrModalBtn.addEventListener('click', () => {
+            ocrPreviewContainer.style.display = 'none';
+            ocrStatusContainer.style.display = 'none';
+            ocrFileInput.value = '';
+            ocrModalBackdrop.classList.add('active');
+        });
+    }
+
+    closeOcrModalBtn.addEventListener('click', () => ocrModalBackdrop.classList.remove('active'));
+    cancelOcrModalBtn.addEventListener('click', () => ocrModalBackdrop.classList.remove('active'));
+
+    ocrFileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Exibe preview
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            ocrPreviewImg.src = event.target.result;
+            ocrPreviewContainer.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+
+        ocrStatusContainer.style.display = 'block';
+        ocrStatusText.textContent = 'Iniciando inteligência OCR por imagem...';
+
+        try {
+            if (window.Tesseract) {
+                const result = await Tesseract.recognize(file, 'por', {
+                    logger: m => {
+                        if (m.status === 'recognizing text') {
+                            ocrStatusText.textContent = `Lendo texto do Freshservice: ${Math.round(m.progress * 100)}%`;
+                        }
+                    }
+                });
+
+                const text = result.data.text || '';
+                console.log('OCR Extraído:', text);
+
+                // Regex para extrair Ticket ID do Freshservice
+                const matchNumber = text.match(/\[?(#?SR-\d{5,8}|#?\d{6}|SR-\d{5,8})\]?/i);
+                const ticketNum = matchNumber ? matchNumber[1].replace('[', '').replace(']', '') : '#SR-312654';
+
+                // Regex para Solicitante / Problema / Solução
+                const matchSolicitante = text.match(/Solicitado por\s*([^\n\r]+)|Requester:\s*([^\n\r]+)/i);
+                const solicitante = matchSolicitante ? (matchSolicitante[1] || matchSolicitante[2]).trim() : '';
+
+                const matchSolucao = text.match(/Solução:\s*([^\n\r]+)|Validado com\s*([^\n\r]+)/i);
+                const solucaoTxt = matchSolucao ? matchSolucao[0] : '';
+
+                ocrModalBackdrop.classList.remove('active');
+
+                // Abre o formulário de ticket preenchido via OCR para revisão do analista
+                ticketForm.reset();
+                document.getElementById('ticketIdHidden').value = '';
+                document.getElementById('ticketNumber').value = ticketNum.startsWith('#') ? ticketNum : '#' + ticketNum;
+                document.getElementById('ticketProblem').value = solicitante ? `Chamado solicitado por ${solicitante}.` : (text.slice(0, 150) || 'Atendimento de suporte técnico.');
+                document.getElementById('ticketSolution').value = solucaoTxt || 'Solução realizada pelo analista e validada.';
+                document.getElementById('ticketValidation').value = solicitante ? `Validado com ${solicitante}` : 'Validado no local';
+
+                modalFormTitle.innerHTML = '<i class="ri-camera-lens-line text-teal"></i> Ticket Extraído por OCR (Print/Câmera)';
+                ticketModalBackdrop.classList.add('active');
+            } else {
+                throw new Error('Tesseract library offline');
+            }
+        } catch (err) {
+            console.error('Erro no OCR:', err);
+            ocrStatusText.textContent = 'Erro ao ler imagem. Preencha manualmente.';
+        }
+    });
 
     // Sync Freshservice API Tickets
     fetchApiTicketsBtn.addEventListener('click', async () => {
@@ -318,7 +402,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (searchInput) searchInput.addEventListener('input', renderTable);
 
-    // Modal Control: Add Ticket (CORRIGIDO PARA FUNCIONAR MANUALMENTE)
+    // Modal Control: Add Ticket
     if (openAddTicketBtn) {
         openAddTicketBtn.addEventListener('click', () => {
             ticketForm.reset();
@@ -414,7 +498,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const config = getApiConfig();
         const analyst = config.analystName || 'Caíque Eduardo';
 
-        // Cabeçalho da Ronda Diária
         const excelRows = [
             ['========================================================================================'],
             [`PASSAGEM DE PLANTÃO SUPORTE TÉCNICO HOSPITALAR — ANALISTA: ${analyst.toUpperCase()}`],
@@ -425,7 +508,6 @@ document.addEventListener('DOMContentLoaded', () => {
             ['Setor Hospitalar', 'Status da Ronda', 'Observações / Ocorrências', 'Validado Por']
         ];
 
-        // Linhas dos 4 setores da Ronda Diária
         ronda.forEach(r => {
             excelRows.push([r.nome, r.status, r.obs, r.validado]);
         });
@@ -434,7 +516,6 @@ document.addEventListener('DOMContentLoaded', () => {
         excelRows.push(['---------------------------------- CHAMADOS ATENDIDOS NO PLANTÃO (4 BLOCOS) ----------------------------------']);
         excelRows.push(['Item', '1. Número do Chamado', '2. Problema Constatado', '3. Solução Efetuada', '4. Validação (Quem Validou)', 'Data']);
 
-        // Linhas dos Chamados Atendidos
         tickets.forEach((t, idx) => {
             excelRows.push([
                 idx + 1,
