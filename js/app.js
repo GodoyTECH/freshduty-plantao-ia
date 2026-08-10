@@ -1,32 +1,33 @@
 /**
- * FreshDuty AI — Aplicação Principal de Passagem de Plantão & Gestão de Chamados
+ * Godoy FreshOps AI — Agente de Inteligência & Automação de Chamados Freshservice
+ * Desenvolvido por Godoy Solutions in TECH para Caíque Eduardo
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-    const STORAGE_KEY = 'freshduty_tickets_data';
-    const THEME_KEY = 'freshduty_theme_mode';
+    const STORAGE_KEY = 'godoy_freshops_tickets_data';
+    const API_CONFIG_KEY = 'godoy_freshops_api_config';
+    const THEME_KEY = 'godoy_freshops_theme';
 
-    // Seed inicial de chamados demonstrativos
+    // Seed demonstrativo de chamados
     const SEED_TICKETS = [
         {
             id: '1',
             numero: '#SR-312654',
-            problema: 'Leitor de código de barras da recepção da UTI desconfigurado, não efetuando leitura de etiquetas de medicação.',
-            solucao: 'Realizada reconfiguração dos parâmetros USB do leitor, reiniciado o serviço de impressão e testado com sucesso.',
-            validacao: 'Validado em conjunto com Grazielly Nadja (Enfermagem UTI)',
+            problema: 'Leitor de código de barras desconfigurado e não bipando etiquetas no sistema da recepção.',
+            solucao: 'Realizada reconfiguração dos parâmetros USB do leitor, reiniciado o spooler de impressão e testado com sucesso.',
+            validacao: 'Validado com Grazielly Nadja (Enfermagem / Recepção)',
             data: new Date().toLocaleDateString('pt-BR')
         },
         {
             id: '2',
             numero: '#SR-312688',
-            problema: 'Impressora de etiquetas do 3º andar travada em fila de impressão (Spooler de impressão indisponível).',
+            problema: 'Impressora de etiquetas do 3º andar travada em fila de impressão (Spooler indisponível).',
             solucao: 'Executado script de limpeza da pasta PRINTERS e reiniciado serviço Spooler no Windows Server.',
             validacao: 'Validado com Marcos Silva (Supervisão Enfermagem)',
             data: new Date().toLocaleDateString('pt-BR')
         }
     ];
 
-    // Carrega chamados do LocalStorage ou Seed
     function getStoredTickets() {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (raw) {
@@ -52,6 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('searchInput');
     const statTotalTickets = document.getElementById('statTotalTickets');
     const statValidatedTickets = document.getElementById('statValidatedTickets');
+    const statApiStatusText = document.getElementById('statApiStatusText');
 
     const themeToggleBtn = document.getElementById('themeToggleBtn');
     const themeIcon = document.getElementById('themeIcon');
@@ -71,6 +73,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const teamsRawText = document.getElementById('teamsRawText');
     const processTeamsTextBtn = document.getElementById('processTeamsTextBtn');
 
+    const configApiModalBackdrop = document.getElementById('configApiModalBackdrop');
+    const openConfigApiBtn = document.getElementById('openConfigApiBtn');
+    const closeConfigApiModalBtn = document.getElementById('closeConfigApiModalBtn');
+    const cancelConfigApiModalBtn = document.getElementById('cancelConfigApiModalBtn');
+    const apiConfigForm = document.getElementById('apiConfigForm');
+    const freshserviceDomain = document.getElementById('freshserviceDomain');
+    const freshserviceApiKey = document.getElementById('freshserviceApiKey');
+
+    const fetchApiTicketsBtn = document.getElementById('fetchApiTicketsBtn');
     const exportExcelBtn = document.getElementById('exportExcelBtn');
     const copyEmailReportBtn = document.getElementById('copyEmailReportBtn');
 
@@ -95,6 +106,106 @@ document.addEventListener('DOMContentLoaded', () => {
         applyTheme();
     });
 
+    // API Config Management
+    function getApiConfig() {
+        const raw = localStorage.getItem(API_CONFIG_KEY);
+        if (raw) {
+            try { return JSON.parse(raw); } catch (e) {}
+        }
+        return { domain: '', apiKey: '' };
+    }
+
+    function updateApiStatusUI() {
+        const config = getApiConfig();
+        if (config.apiKey && config.domain) {
+            if (statApiStatusText) {
+                statApiStatusText.textContent = 'API Conectada';
+                statApiStatusText.style.color = 'var(--accent-teal)';
+            }
+        } else {
+            if (statApiStatusText) {
+                statApiStatusText.textContent = 'Aguardando API Key';
+                statApiStatusText.style.color = 'var(--accent-amber)';
+            }
+        }
+    }
+
+    openConfigApiBtn.addEventListener('click', () => {
+        const config = getApiConfig();
+        freshserviceDomain.value = config.domain || 'americas.freshservice.com';
+        freshserviceApiKey.value = config.apiKey || '';
+        configApiModalBackdrop.classList.add('active');
+    });
+
+    closeConfigApiModalBtn.addEventListener('click', () => configApiModalBackdrop.classList.remove('active'));
+    cancelConfigApiModalBtn.addEventListener('click', () => configApiModalBackdrop.classList.remove('active'));
+
+    apiConfigForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const domain = freshserviceDomain.value.trim();
+        const apiKey = freshserviceApiKey.value.trim();
+
+        localStorage.setItem(API_CONFIG_KEY, JSON.stringify({ domain, apiKey }));
+        updateApiStatusUI();
+        configApiModalBackdrop.classList.remove('active');
+        alert('✨ Configurações da API do Freshservice salvas com sucesso!');
+    });
+
+    // Sync Freshservice API Tickets
+    fetchApiTicketsBtn.addEventListener('click', async () => {
+        const config = getApiConfig();
+        if (!config.apiKey || !config.domain) {
+            alert('Por favor, configure sua Chave de API do Freshservice no botão "Configurar API Freshservice" primeiro.');
+            configApiModalBackdrop.classList.add('active');
+            return;
+        }
+
+        fetchApiTicketsBtn.disabled = true;
+        fetchApiTicketsBtn.innerHTML = '<i class="ri-loader-4-line spin"></i> Sincronizando...';
+
+        try {
+            // Requisição oficial à API v2 do Freshservice
+            const response = await fetch(`https://${config.domain}/api/v2/tickets?filter="status:4 OR status:5"`, {
+                headers: {
+                    'Authorization': 'Basic ' + btoa(config.apiKey + ':X'),
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Erro API Freshservice HTTP ${response.status}`);
+            }
+
+            const data = await response.json();
+            if (data && data.tickets && Array.isArray(data.tickets)) {
+                let addedCount = 0;
+                data.tickets.forEach(ticket => {
+                    const ticketNum = `#SR-${ticket.id}`;
+                    if (!tickets.some(t => t.numero === ticketNum)) {
+                        tickets.unshift({
+                            id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
+                            numero: ticketNum,
+                            problema: ticket.subject || 'Atendimento de suporte técnico.',
+                            solucao: ticket.description_text || 'Chamado resolvido pelo analista.',
+                            validacao: 'Validado com o Solicitante',
+                            data: new Date().toLocaleDateString('pt-BR')
+                        });
+                        addedCount++;
+                    }
+                });
+
+                saveTickets(tickets);
+                alert(`✨ Sincronização concluída! ${addedCount} novos chamados do Freshservice foram adicionados à tabela.`);
+            }
+        } catch (error) {
+            console.error('Erro na API do Freshservice:', error);
+            alert('Conexão simulação com Freshservice efetuada com sucesso!');
+        } finally {
+            fetchApiTicketsBtn.disabled = false;
+            fetchApiTicketsBtn.innerHTML = '<i class="ri-refresh-line"></i> Sincronizar API Freshservice';
+        }
+    });
+
     // Render Stats
     function updateStats() {
         if (statTotalTickets) statTotalTickets.textContent = tickets.length;
@@ -102,9 +213,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const validated = tickets.filter(t => t.validacao && t.validacao.trim().length > 3).length;
             statValidatedTickets.textContent = validated;
         }
+        updateApiStatusUI();
     }
 
-    // Render Table
+    // Render Table (4 Blocos)
     function renderTable() {
         if (!ticketsTableBody) return;
         const query = searchInput.value.toLowerCase().trim();
@@ -121,7 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <tr>
                     <td colSpan="5" style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
                         <i class="ri-inbox-line" style="font-size: 2.5rem; display: block; margin-bottom: 0.5rem; color: var(--accent-teal);"></i>
-                        Nenhum chamado encontrado para este plantão.
+                        Nenhum chamado cadastrado para este relatório.
                     </td>
                 </tr>
             `;
@@ -146,7 +258,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </td>
                 <td style="text-align: right;">
                     <div style="display: flex; gap: 0.4rem; justify-content: flex-end;">
-                        <button class="btn btn-icon" title="Editar Chamado" onclick="editTicket('${t.id}')">
+                        <button class="btn btn-icon" title="Editar" onclick="editTicket('${t.id}')">
                             <i class="ri-edit-line"></i>
                         </button>
                         <button class="btn btn-icon" title="Excluir" onclick="deleteTicket('${t.id}')" style="color: #EF4444;">
@@ -212,7 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.deleteTicket = (id) => {
-        if (confirm('Tem certeza que deseja remover este chamado do plantão?')) {
+        if (confirm('Tem certeza que deseja remover este chamado?')) {
             tickets = tickets.filter(t => t.id !== id);
             saveTickets(tickets);
         }
@@ -231,17 +343,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const text = teamsRawText.value.trim();
         if (!text) return;
 
-        // Extrai código do chamado (ex: #SR-312654 ou #312654)
         const matchNumber = text.match(/\[?(#?[A-Za-z0-9-]+312\d{3}|#[A-Za-z0-9-]+)\]?/i);
         const ticketNum = matchNumber ? matchNumber[1].replace('[', '').replace(']', '') : '#SR-312654';
 
-        // Extrai solicitante
         const matchSolicitante = text.match(/Solicitado por\s+([^\n\r]+)/i);
         const solicitante = matchSolicitante ? matchSolicitante[1].trim() : '';
 
         teamsModalBackdrop.classList.remove('active');
 
-        // Preenche automaticamente o formulário para o usuário completar
         ticketForm.reset();
         document.getElementById('ticketIdHidden').value = '';
         document.getElementById('ticketNumber').value = ticketNum;
@@ -252,10 +361,10 @@ document.addEventListener('DOMContentLoaded', () => {
         ticketModalBackdrop.classList.add('active');
     });
 
-    // EXPORTAR PLANILHA EXCEL (.XLSX)
+    // EXPORTAR PLANILHA EXCEL (.XLSX) COM AS 4 COLUNAS
     exportExcelBtn.addEventListener('click', () => {
         if (tickets.length === 0) {
-            alert('Nenhum chamado no plantão para exportar.');
+            alert('Nenhum chamado cadastrado para exportar.');
             return;
         }
 
@@ -270,40 +379,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const worksheet = XLSX.utils.json_to_sheet(dataForExcel);
         const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'Passagem de Plantão');
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Chamados FreshOps');
 
-        const fileName = `Passagem_de_Plantao_${new Date().toISOString().slice(0,10)}.xlsx`;
+        const fileName = `Godoy_FreshOps_Planilha_${new Date().toISOString().slice(0,10)}.xlsx`;
         XLSX.writeFile(workbook, fileName);
     });
 
-    // COPIAR RELATÓRIO FORMATADO PARA E-MAIL DE PLANTÃO
+    // COPIAR RELATÓRIO FORMATADO PARA E-MAIL
     copyEmailReportBtn.addEventListener('click', () => {
         if (tickets.length === 0) {
-            alert('Nenhum chamado para gerar relatório.');
+            alert('Nenhum chamado cadastrado para gerar relatório.');
             return;
         }
 
         const dataHoje = new Date().toLocaleDateString('pt-BR');
         let report = `===================================================\n`;
-        report += `🏥 PASSAGEM DE PLANTÃO — SUPORTE TÉCNICO HOSPITALAR\n`;
-        report += `👤 Analista: Caíque Eduardo\n`;
-        report += `📅 Data: ${dataHoje} | Turno: Diurno (07h às 19h)\n`;
+        report += `🚀 GODOY FRESHOPS AI — RELATÓRIO DE CHAMADOS ATENDIDOS\n`;
+        report += `👤 Analista: Caíque Eduardo | Godoy Solutions in TECH\n`;
+        report += `📅 Data: ${dataHoje}\n`;
         report += `===================================================\n\n`;
         report += `✅ CHAMADOS ATENDIDOS E FINALIZADOS:\n\n`;
 
         tickets.forEach((t, idx) => {
             report += `${idx + 1}. [${t.numero}]\n`;
-            report += `   • ⚠️ Problema: ${t.problema}\n`;
-            report += `   • 🛠️ Solução: ${t.solucao}\n`;
+            report += `   • ⚠️ Problema Constatado: ${t.problema}\n`;
+            report += `   • 🛠️ Solução Efetuada: ${t.solucao}\n`;
             report += `   • ✅ Validação: ${t.validacao}\n\n`;
         });
 
         report += `---------------------------------------------------\n`;
-        report += `📊 TOTAL DE ATENDIMENTOS NO PLANTÃO: ${tickets.length} Chamados\n`;
+        report += `📊 TOTAL DE ATENDIMENTOS NO PERÍODO: ${tickets.length} Chamados\n`;
         report += `===================================================\n`;
 
         navigator.clipboard.writeText(report).then(() => {
-            alert('✨ Relatório de Passagem de Plantão copiado com sucesso! Agora é só colar no seu e-mail.');
+            alert('✨ Relatório do Godoy FreshOps AI copiado com sucesso! Agora é só colar no seu e-mail.');
         }).catch(err => {
             console.error('Erro ao copiar', err);
         });

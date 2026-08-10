@@ -3,13 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FreshDuty AI — Passagem de Plantão & Gestão de Chamados Freshservice</title>
-    <meta name="description" content="Gerador de relatório de passagem de plantão para suporte técnico hospitalar integrado com Freshservice e Microsoft Teams.">
+    <title>Godoy FreshOps AI — Agente de Gestão de Chamados & Automação Freshservice</title>
+    <meta name="description" content="Agente pessoal de inteligência e automação de chamados Freshservice desenvolvido por Godoy Solutions in TECH para Caíque Eduardo.">
+    <meta name="author" content="Godoy Solutions in TECH">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="https://godoysoluintech.netlify.app/logonew.png">
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
     
     <!-- RemixIcon CDN -->
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
@@ -26,19 +30,22 @@
     <header class="app-header">
         <div class="container header-container">
             <div class="brand-logo">
-                <div class="logo-icon"><i class="ri-hospital-line"></i></div>
+                <div class="logo-icon"><i class="ri-robot-line"></i></div>
                 <div>
-                    <h1 class="brand-name">FreshDuty <span class="badge-ai">AI</span></h1>
-                    <p class="brand-subtitle">Passagem de Plantão & Suporte Técnico Freshservice</p>
+                    <h1 class="brand-name">Godoy FreshOps <span class="badge-ai">AI AGENT</span></h1>
+                    <p class="brand-subtitle">Automação Pessoal de Chamados Freshservice • Godoy Solutions in TECH</p>
                 </div>
             </div>
 
             <div class="header-actions">
+                <button class="btn btn-secondary btn-sm" id="openConfigApiBtn" title="Configurar API do Freshservice">
+                    <i class="ri-key-2-line text-amber"></i> Configurar API Freshservice
+                </button>
                 <button class="btn btn-icon" id="themeToggleBtn" title="Alternar Modo Claro / Escuro">
                     <i class="ri-sun-line" id="themeIcon"></i>
                 </button>
                 <div class="user-pill">
-                    <i class="ri-user-heart-line text-teal"></i>
+                    <i class="ri-shield-user-line text-teal"></i>
                     <span>Analista: <strong>Caíque Eduardo</strong></span>
                 </div>
             </div>
@@ -54,7 +61,7 @@
                     <div class="stat-icon"><i class="ri-ticket-2-line"></i></div>
                     <div>
                         <div class="stat-value" id="statTotalTickets">0</div>
-                        <div class="stat-label">Chamados no Plantão</div>
+                        <div class="stat-label">Chamados Registrados</div>
                     </div>
                 </div>
 
@@ -62,31 +69,34 @@
                     <div class="stat-icon text-green"><i class="ri-checkbox-circle-line"></i></div>
                     <div>
                         <div class="stat-value" id="statValidatedTickets">0</div>
-                        <div class="stat-label">Chamados Validados</div>
+                        <div class="stat-label">Soluções Validadas</div>
                     </div>
                 </div>
 
                 <div class="card-stat">
-                    <div class="stat-icon text-amber"><i class="ri-time-line"></i></div>
+                    <div class="stat-icon text-amber"><i class="ri-[#38BDF8] ri-cpu-line"></i></div>
                     <div>
-                        <div class="stat-value" id="currentShiftText">Diurno (07h - 19h)</div>
-                        <div class="stat-label">Turno de Atendimento</div>
+                        <div class="stat-value" id="statApiStatusText">API Conectada</div>
+                        <div class="stat-label">Status da Conexão Freshservice</div>
                     </div>
                 </div>
             </div>
 
             <div class="action-bar">
                 <button class="btn btn-primary" id="openAddTicketBtn">
-                    <i class="ri-add-line"></i> Novo Chamado
+                    <i class="ri-add-line"></i> Registrar Chamado
+                </button>
+                <button class="btn btn-secondary" id="fetchApiTicketsBtn">
+                    <i class="ri-refresh-line"></i> Sincronizar API Freshservice
                 </button>
                 <button class="btn btn-secondary" id="openPasteTeamsModalBtn">
                     <i class="ri-microsoft-teams-line"></i> Importar do Teams
                 </button>
                 <button class="btn btn-success" id="exportExcelBtn">
-                    <i class="ri-file-excel-line"></i> Baixar Planilha (.xlsx)
+                    <i class="ri-file-excel-line"></i> Gerar Planilha Excel (.xlsx)
                 </button>
                 <button class="btn btn-teal" id="copyEmailReportBtn">
-                    <i class="ri-clipboard-line"></i> Copiar Relatório de E-mail
+                    <i class="ri-clipboard-line"></i> Copiar Relatório Completo
                 </button>
             </div>
         </section>
@@ -94,10 +104,10 @@
         <!-- Ticket Table Section -->
         <section class="table-section">
             <div class="section-header">
-                <h2><i class="ri-list-check-2"></i> Chamados Atendidos no Plantão</h2>
+                <h2><i class="ri-terminal-window-line"></i> Tabela Organizadora de Atendimentos (4 Blocos)</h2>
                 <div class="search-box">
                     <i class="ri-search-line"></i>
-                    <input type="text" id="searchInput" placeholder="Filtrar por nº, problema ou validação...">
+                    <input type="text" id="searchInput" placeholder="Filtrar por nº, problema ou quem validou...">
                 </div>
             </div>
 
@@ -138,28 +148,28 @@
 
                 <div class="form-group">
                     <label class="form-label" for="ticketProblem">2. Problema Constatado *</label>
-                    <textarea id="ticketProblem" class="form-textarea" rows="3" placeholder="Ex: Leitor de código de barras da recepção da UTI desconfigurado e não bipando etiquetas." required></textarea>
+                    <textarea id="ticketProblem" class="form-textarea" rows="3" placeholder="Ex: Leitor de código de barras desconfigurado e não bipando etiquetas no sistema." required></textarea>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label" for="ticketSolution">3. Solução Efetuada *</label>
-                    <textarea id="ticketSolution" class="form-textarea" rows="3" placeholder="Ex: Realizada reconfiguração dos parâmetros USB do leitor, reiniciado o serviço de impressão e testado com sucesso." required></textarea>
+                    <textarea id="ticketSolution" class="form-textarea" rows="3" placeholder="Ex: Reconfigurados os parâmetros USB do leitor, reiniciado o spooler de impressão e testado com sucesso." required></textarea>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label" for="ticketValidation">4. Validação / Quem Validou *</label>
-                    <input type="text" id="ticketValidation" class="form-input" placeholder="Ex: Validado em conjunto com Grazielly Nadja (Enfermagem UTI)" required>
+                    <input type="text" id="ticketValidation" class="form-input" placeholder="Ex: Validado em conjunto com Grazielly Nadja (Enfermagem)" required>
                 </div>
 
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" id="cancelTicketModalBtn">Cancelar</button>
-                    <button type="submit" class="btn btn-primary"><i class="ri-save-line"></i> Salvar no Plantão</button>
+                    <button type="submit" class="btn btn-primary"><i class="ri-save-line"></i> Salvar Chamado</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- MODAL 2: IMPORTAR MENSAGEM DO TEAMS (AMERICASBOT) -->
+    <!-- MODAL 2: IMPORTAR TEAMS (AMERICASBOT) -->
     <div class="modal-backdrop" id="teamsModalBackdrop">
         <div class="modal-card">
             <div class="modal-header">
@@ -168,19 +178,47 @@
             </div>
 
             <div class="form-group">
-                <label class="form-label" for="teamsRawText">Cole o texto da mensagem do Teams do bot abaixo:</label>
-                <textarea id="teamsRawText" class="form-textarea" rows="6" placeholder="Cole aqui a mensagem inteira enviada pelo AmericasBot do Teams...
+                <label class="form-label" for="teamsRawText">Cole a mensagem do Teams recebida pelo bot:</label>
+                <textarea id="teamsRawText" class="form-textarea" rows="6" placeholder="Cole a mensagem inteira enviada pelo bot do Teams...
 Exemplo:
 Olá, Caique! Você tem um novo ticket atribuído a você
 [#SR-312654]
 Solicitado por Grazielly Nadja Ferreira..."></textarea>
-                <small class="form-hint">O FreshDuty AI reconhece automaticamente o número do chamado (#SR-xxxxxx) e o solicitante para você!</small>
+                <small class="form-hint">O Godoy FreshOps AI extrai automaticamente o código #SR-xxxxxx e o solicitante para você!</small>
             </div>
 
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" id="cancelTeamsModalBtn">Cancelar</button>
-                <button type="button" class="btn btn-teal" id="processTeamsTextBtn"><i class="ri-magic-line"></i> Processar & Preencher</button>
+                <button type="button" class="btn btn-teal" id="processTeamsTextBtn"><i class="ri-magic-line"></i> Extrair Dados do Card</button>
             </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: CONFIGURAR API DO FRESHSERVICE -->
+    <div class="modal-backdrop" id="configApiModalBackdrop">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="ri-key-2-line text-amber"></i> Configurar Chave API do Freshservice</h3>
+                <button class="btn-close" id="closeConfigApiModalBtn"><i class="ri-close-line"></i></button>
+            </div>
+
+            <form id="apiConfigForm">
+                <div class="form-group">
+                    <label class="form-label" for="freshserviceDomain">Domínio do Freshservice *</label>
+                    <input type="text" id="freshserviceDomain" class="form-input font-mono" placeholder="exemplo.freshservice.com" value="americas.freshservice.com" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="freshserviceApiKey">Chave de API Pessoal (API Key) *</label>
+                    <input type="password" id="freshserviceApiKey" class="form-input font-mono" placeholder="Digite sua API Key do Freshservice" required>
+                    <small class="form-hint">Para pegar sua chave: Acesse o Freshservice -> Seu Perfil -> Configurações do Perfil -> API Key.</small>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancelConfigApiModalBtn">Cancelar</button>
+                    <button type="submit" class="btn btn-primary"><i class="ri-save-line"></i> Salvar Credenciais</button>
+                </div>
+            </form>
         </div>
     </div>
 
