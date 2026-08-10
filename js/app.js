@@ -185,13 +185,14 @@ document.addEventListener('DOMContentLoaded', () => {
         alert('✨ Configurações salvas com sucesso!');
     });
 
-    // Render Ronda Diária (4 Setores)
+    // Render Ronda Diária (4 Setores EDITÁVEIS)
     function renderRondaGrid() {
         if (!rondaGrid) return;
         rondaGrid.innerHTML = ronda.map((setor, idx) => `
             <div class="ronda-card">
                 <div class="ronda-title">
-                    <i class="ri-building-line text-teal"></i> ${setor.nome}
+                    <i class="ri-building-line text-teal"></i>
+                    <input type="text" class="ronda-nome-input" value="${setor.nome}" placeholder="Nome do Setor..." onchange="updateRondaField(${idx}, 'nome', this.value)" title="Clique para editar o nome deste setor">
                 </div>
                 <div class="ronda-inputs">
                     <select class="ronda-select" onchange="updateRondaField(${idx}, 'status', this.value)">
@@ -227,7 +228,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const file = e.target.files[0];
         if (!file) return;
 
-        // Exibe preview
         const reader = new FileReader();
         reader.onload = (event) => {
             ocrPreviewImg.src = event.target.result;
@@ -251,11 +251,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const text = result.data.text || '';
                 console.log('OCR Extraído:', text);
 
-                // Regex para extrair Ticket ID do Freshservice
                 const matchNumber = text.match(/\[?(#?SR-\d{5,8}|#?\d{6}|SR-\d{5,8})\]?/i);
                 const ticketNum = matchNumber ? matchNumber[1].replace('[', '').replace(']', '') : '#SR-312654';
 
-                // Regex para Solicitante / Problema / Solução
                 const matchSolicitante = text.match(/Solicitado por\s*([^\n\r]+)|Requester:\s*([^\n\r]+)/i);
                 const solicitante = matchSolicitante ? (matchSolicitante[1] || matchSolicitante[2]).trim() : '';
 
@@ -264,7 +262,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 ocrModalBackdrop.classList.remove('active');
 
-                // Abre o formulário de ticket preenchido via OCR para revisão do analista
                 ticketForm.reset();
                 document.getElementById('ticketIdHidden').value = '';
                 document.getElementById('ticketNumber').value = ticketNum.startsWith('#') ? ticketNum : '#' + ticketNum;
