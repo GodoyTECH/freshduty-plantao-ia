@@ -1,7 +1,7 @@
 -- =========================================================
 -- Schema SQL para Banco de Dados Neon PostgreSQL
 -- Projeto: Godoy FreshOps AI — Histórico de Chamados e Rondas Hospitalares
--- Desenvolvido por Godoy Solutions in TECH para Caíque Eduardo
+-- Desenvolvido por Godoy Solutions in TECH para Caique Eduardo
 -- =========================================================
 
 -- 1. Tabela de Rondas Diárias Arquivadas por Data
@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS rondas_historico (
     status_ronda VARCHAR(50) NOT NULL,
     observacao TEXT,
     validado_por VARCHAR(255),
-    analista_nome VARCHAR(255) DEFAULT 'Caíque Eduardo',
+    analista_nome VARCHAR(255) DEFAULT 'Caique Eduardo',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS chamados_historico (
     problema_constatado TEXT NOT NULL,
     solucao_efetuada TEXT NOT NULL,
     validado_por VARCHAR(255) NOT NULL,
-    analista_nome VARCHAR(255) DEFAULT 'Caíque Eduardo',
+    analista_nome VARCHAR(255) DEFAULT 'Caique Eduardo',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

@@ -1,6 +1,6 @@
 /**
  * Godoy FreshOps AI — Relógio Tempo Real, Auto-Reset Diário, Formatação WhatsApp Concisa & Teams Realtime
- * Desenvolvido por Godoy Solutions in TECH para Caíque Eduardo
+ * Desenvolvido por Godoy Solutions in TECH para Caique Eduardo
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -254,18 +254,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (raw) {
             try { return JSON.parse(raw); } catch (e) {}
         }
-        return { analystName: 'Caíque Eduardo', domain: 'americas.freshservice.com', apiKey: '', webhookUrl: '', neonUrl: '' };
+        return { analystName: 'Caique Eduardo', domain: 'americas.freshservice.com', apiKey: '', webhookUrl: '', neonUrl: '' };
     }
 
     function updateAnalystUI() {
         const config = getApiConfig();
-        const currentName = config.analystName || 'Caíque Eduardo';
+        const currentName = config.analystName || 'Caique Eduardo';
         if (displayAnalystName) displayAnalystName.textContent = currentName;
     }
 
     openConfigApiBtn.addEventListener('click', () => {
         const config = getApiConfig();
-        analystNameInput.value = config.analystName || 'Caíque Eduardo';
+        analystNameInput.value = config.analystName || 'Caique Eduardo';
         if (neonDatabaseUrl) neonDatabaseUrl.value = config.neonUrl || '';
         if (teamsWebhookUrl) teamsWebhookUrl.value = config.webhookUrl || '';
         freshserviceDomain.value = config.domain || 'americas.freshservice.com';
@@ -329,7 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (copyRondaWhatsAppBtn) {
         copyRondaWhatsAppBtn.addEventListener('click', () => {
             const config = getApiConfig();
-            const analyst = config.analystName || 'Caíque Eduardo';
+            const analyst = config.analystName || 'Caique Eduardo';
             const dataHoje = new Date().toLocaleDateString('pt-BR');
 
             let msg = `🏥 *RELATÓRIO DE RONDA DIÁRIA — SUPORTE TÉCNICO*\n`;
@@ -704,7 +704,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // EXPORTAR PLANILHA EXCEL (.XLSX)
     exportExcelBtn.addEventListener('click', () => {
         const config = getApiConfig();
-        const analyst = config.analystName || 'Caíque Eduardo';
+        const analyst = config.analystName || 'Caique Eduardo';
 
         const excelRows = [
             ['========================================================================================'],
@@ -746,7 +746,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // COPIAR RELATÓRIO FORMATADO PARA E-MAIL DE PLANTÃO
     copyEmailReportBtn.addEventListener('click', () => {
         const config = getApiConfig();
-        const analyst = config.analystName || 'Caíque Eduardo';
+        const analyst = config.analystName || 'Caique Eduardo';
         const dataHoje = new Date().toLocaleDateString('pt-BR');
 
         let report = `===================================================\n`;
@@ -755,7 +755,7 @@ document.addEventListener('DOMContentLoaded', () => {
         report += `📅 Data: ${dataHoje} | Turno: Diurno (07h às 19h)\n`;
         report += `===================================================\n\n`;
 
-        report += `🚶‍♂️ RONDA DIÁRIA / PRIMEIRA RONDA (4 SETORES):\n`;
+        report += `WALK / PRIMEIRA RONDA (4 SETORES):\n`;
         ronda.forEach(r => {
             report += `  • ${r.nome}: [${r.status}] ${r.status === 'PENDENTE' ? '- ' + r.obs : ''} (${r.validado})\n`;
         });

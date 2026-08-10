@@ -1,6 +1,6 @@
 """
 Godoy FreshOps AI — Script de Validação de Conexão com Banco Neon PostgreSQL
-Desenvolvido por Godoy Solutions in TECH para Caíque Eduardo
+Desenvolvido por Godoy Solutions in TECH para Caique Eduardo
 
 Instruções de Uso:
 1. Execute: python automation/test_neon_connection.py "SUA_DATABASE_URL_DO_NEON"
@@ -41,7 +41,7 @@ def test_neon_connection(connection_string=None):
                 problema_constatado TEXT NOT NULL,
                 solucao_efetuada TEXT NOT NULL,
                 validado_por VARCHAR(255) NOT NULL,
-                analista_nome VARCHAR(255) DEFAULT 'Caíque Eduardo',
+                analista_nome VARCHAR(255) DEFAULT 'Caique Eduardo',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
