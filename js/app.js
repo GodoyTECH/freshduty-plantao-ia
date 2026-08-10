@@ -1,5 +1,5 @@
 /**
- * Godoy FreshOps AI — Relógio Tempo Real, Auto-Reset Diário com Persistência em Nuvem Neon PostgreSQL & Teams Realtime
+ * Godoy FreshOps AI — Relógio Tempo Real, Auto-Reset Diário, Formatação WhatsApp Concisa & Teams Realtime
  * Desenvolvido por Godoy Solutions in TECH para Caíque Eduardo
  */
 
@@ -41,9 +41,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (lastDate && lastDate !== currentDateStr) {
             console.log(`✨ Virada de dia detectada: ${lastDate} -> ${currentDateStr}. Arquivando dia anterior e zerando chamados...`);
             
-            // Arquiva dados do dia anterior no banco Neon PostgreSQL
-            archivePreviousDayData(lastDate);
-
             // Zera os chamados do dia atual
             tickets = [];
             saveTickets(tickets);
@@ -51,18 +48,6 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem(LAST_DATE_KEY, currentDateStr);
         } else if (!lastDate) {
             localStorage.setItem(LAST_DATE_KEY, currentDateStr);
-        }
-    }
-
-    async function archivePreviousDayData(dateStr) {
-        const config = getApiConfig();
-        if (config.neonUrl) {
-            try {
-                console.log(`Sincronizando histórico do dia ${dateStr} com o banco de dados Neon PostgreSQL...`);
-                // Envia dados para o servidor de sincronização Neon
-            } catch (err) {
-                console.error('Erro ao sincronizar com Neon DB:', err);
-            }
         }
     }
 
@@ -92,10 +77,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Setores Padrão da Ronda Diária
     const DEFAULT_RONDA_SETORES = [
-        { id: 1, nome: 'Setor 1 — UTI Adulto & Neonatal', status: 'OK', obs: 'Sem anormalidades encontradas nas estações.', validado: 'Enfermeiro Chefe' },
-        { id: 2, nome: 'Setor 2 — Recepção Central & PS', status: 'OK', obs: 'Leitores e impressoras funcionando.', validado: 'Supervisão Recepção' },
-        { id: 3, nome: 'Setor 3 — Bloco Cirúrgico & Internação', status: 'OK', obs: 'Terminais de checagem operacionais.', validado: 'Coordenação Bloco' },
-        { id: 4, nome: 'Setor 4 — Ambulatório & Farmácia', status: 'OK', obs: 'Sistemas de dispensação normais.', validado: 'Farmacêutico Responsável' }
+        { id: 1, nome: 'Setor 1 — UTI Adulto & Neonatal', status: 'OK', obs: '', validado: 'Enfermeiro Chefe' },
+        { id: 2, nome: 'Setor 2 — Recepção Central & PS', status: 'OK', obs: '', validado: 'Supervisão Recepção' },
+        { id: 3, nome: 'Setor 3 — Bloco Cirúrgico & Internação', status: 'OK', obs: '', validado: 'Coordenação Bloco' },
+        { id: 4, nome: 'Setor 4 — Ambulatório & Farmácia', status: 'OK', obs: '', validado: 'Farmacêutico Responsável' }
     ];
 
     // Seed demonstrativo de chamados do dia
@@ -305,7 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
         alert('✨ Configurações salvas com sucesso!');
     });
 
-    // Render Ronda Diária (4 Setores EDITÁVEIS)
+    // Render Ronda Diária (OCULTA OBS EM 100% OK PARA SCRIPT ENXUTO)
     function renderRondaGrid() {
         if (!rondaGrid) return;
         rondaGrid.innerHTML = ronda.map((setor, idx) => `
@@ -319,7 +304,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         <option value="OK" ${setor.status === 'OK' ? 'selected' : ''}>🟢 Status: 100% OK / Sem Anormalidades</option>
                         <option value="PENDENTE" ${setor.status === 'PENDENTE' ? 'selected' : ''}>🟡 Status: Com Pendência Técnica</option>
                     </select>
-                    <input type="text" class="ronda-input" placeholder="Observações..." value="${setor.obs}" onchange="updateRondaField(${idx}, 'obs', this.value)">
+                    
+                    ${setor.status === 'PENDENTE' ? `
+                        <input type="text" class="ronda-input ronda-obs-pendente" placeholder="⚠️ Descreva a pendência técnica..." value="${setor.obs}" onchange="updateRondaField(${idx}, 'obs', this.value)" required>
+                    ` : ''}
+
                     <input type="text" class="ronda-input" placeholder="Quem validou a ronda..." value="${setor.validado}" onchange="updateRondaField(${idx}, 'validado', this.value)">
                 </div>
             </div>
@@ -328,10 +317,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.updateRondaField = (idx, field, val) => {
         ronda[idx][field] = val;
+        // Se mudou para OK, limpa a observação
+        if (field === 'status' && val === 'OK') {
+            ronda[idx].obs = '';
+        }
         saveRonda(ronda);
+        renderRondaGrid();
     };
 
-    // COPIAR RONDA DIÁRIA FORMATADA PARA WHATSAPP
+    // COPIAR RONDA DIÁRIA FORMATADA CONCISA PARA WHATSAPP (SEM OBS EM 100% OK)
     if (copyRondaWhatsAppBtn) {
         copyRondaWhatsAppBtn.addEventListener('click', () => {
             const config = getApiConfig();
@@ -344,18 +338,23 @@ document.addEventListener('DOMContentLoaded', () => {
             msg += `----------------------------------\n\n`;
 
             ronda.forEach(r => {
-                const statusEmoji = r.status === 'OK' ? '🟢' : '🟡';
-                msg += `${statusEmoji} *${r.nome}*\n`;
-                msg += `   • *Status:* ${r.status === 'OK' ? '100% OK / Sem Anormalidades' : 'Com Pendência Técnica'}\n`;
-                msg += `   • *Obs:* ${r.obs || 'Sem alterações'}\n`;
-                msg += `   • *Validado com:* ${r.validado || 'Equipe do setor'}\n\n`;
+                if (r.status === 'OK') {
+                    msg += `🟢 *${r.nome}*\n`;
+                    msg += `   • *Status:* 100% OK / Sem Anormalidades\n`;
+                    msg += `   • *Validado com:* ${r.validado || 'Equipe do setor'}\n\n`;
+                } else {
+                    msg += `🟡 *${r.nome}*\n`;
+                    msg += `   • *Status:* Com Pendência Técnica\n`;
+                    msg += `   • *Pendência:* ${r.obs || 'Em atendimento'}\n`;
+                    msg += `   • *Validado com:* ${r.validado || 'Equipe do setor'}\n\n`;
+                }
             });
 
             msg += `----------------------------------\n`;
-            msg += `✅ *Ronda Diária Concluída com Sucesso!*`;
+            msg += `✅ *Ronda Diária Concluída!*`;
 
             navigator.clipboard.writeText(msg).then(() => {
-                alert('✨ Resumo formal da Ronda Diária copiado com sucesso! Agora é só colar no WhatsApp.');
+                alert('✨ Resumo enxuto da Ronda Diária copiado com sucesso! Pode colar no WhatsApp.');
             }).catch(err => {
                 console.error('Erro ao copiar', err);
             });
@@ -718,7 +717,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ];
 
         ronda.forEach(r => {
-            excelRows.push([r.nome, r.status, r.obs, r.validado]);
+            excelRows.push([r.nome, r.status, r.obs || 'Sem anormalidades', r.validado]);
         });
 
         excelRows.push(['']);
@@ -758,7 +757,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         report += `🚶‍♂️ RONDA DIÁRIA / PRIMEIRA RONDA (4 SETORES):\n`;
         ronda.forEach(r => {
-            report += `  • ${r.nome}: [${r.status}] - ${r.obs} (${r.validado})\n`;
+            report += `  • ${r.nome}: [${r.status}] ${r.status === 'PENDENTE' ? '- ' + r.obs : ''} (${r.validado})\n`;
         });
         report += `\n---------------------------------------------------\n\n`;
 
