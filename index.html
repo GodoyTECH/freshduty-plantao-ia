@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Godoy FreshOps AI — Agente de Gestão de Chamados & Ronda Hospitalar</title>
-    <meta name="description" content="Agente pessoal de inteligência, OCR por câmera/print, ronda diária e automação Freshservice por Godoy Solutions in TECH.">
+    <meta name="description" content="Agente pessoal de inteligência, OCR por câmera/print, notificações do Teams em tempo real e automação Freshservice por Godoy Solutions in TECH.">
     <meta name="author" content="Godoy Solutions in TECH">
 
     <!-- Favicon -->
@@ -36,11 +36,14 @@
                 <div class="logo-icon"><i class="ri-robot-line"></i></div>
                 <div>
                     <h1 class="brand-name">Godoy FreshOps <span class="badge-ai">AI</span></h1>
-                    <p class="brand-subtitle">OCR por Câmera & Gestão de Chamados</p>
+                    <p class="brand-subtitle">OCR & Notificações do Teams em Tempo Real</p>
                 </div>
             </div>
 
             <div class="header-actions">
+                <button class="btn btn-secondary btn-sm" id="enableNotificationsBtn" title="Ativar Notificações no Celular">
+                    <i class="ri-notification-3-line text-teal"></i> <span class="hide-mobile">Alertas</span>
+                </button>
                 <button class="btn btn-secondary btn-sm" id="openConfigApiBtn" title="Configurar Analista & API">
                     <i class="ri-settings-4-line text-amber"></i> <span class="hide-mobile">Configurações</span>
                 </button>
@@ -65,10 +68,10 @@
             </div>
         </div>
 
-        <!-- Section 1: Ronda Diária (4 Setores Hospitalares) -->
+        <!-- Section 1: Ronda Diária (4 Setores Hospitalares Editáveis) -->
         <section class="ronda-section">
             <div class="ronda-header">
-                <h2><i class="ri-walk-line text-teal"></i> Ronda Diária / Primeira Ronda (4 Setores)</h2>
+                <h2><i class="ri-walk-line text-teal"></i> Ronda Diária / Primeira Ronda (4 Setores Editáveis)</h2>
                 <span class="ronda-badge">Pré-Requisito de Plantão</span>
             </div>
 
@@ -258,11 +261,11 @@ Solicitado por Grazielly Nadja Ferreira..."></textarea>
         </div>
     </div>
 
-    <!-- MODAL 4: CONFIGURAÇÕES DE USUÁRIO & API -->
+    <!-- MODAL 4: CONFIGURAÇÕES DO ANALISTA, TEAMS WEBHOOK & API FRESHSERVICE -->
     <div class="modal-backdrop" id="configApiModalBackdrop">
         <div class="modal-card">
             <div class="modal-header">
-                <h3><i class="ri-settings-4-line text-amber"></i> Configurações do Analista & API</h3>
+                <h3><i class="ri-settings-4-line text-amber"></i> Configurações do Analista & Webhooks</h3>
                 <button class="btn-close" id="closeConfigApiModalBtn"><i class="ri-close-line"></i></button>
             </div>
 
@@ -270,7 +273,13 @@ Solicitado por Grazielly Nadja Ferreira..."></textarea>
                 <div class="form-group">
                     <label class="form-label" for="analystNameInput">Nome do Analista de Suporte *</label>
                     <input type="text" id="analystNameInput" class="form-input" placeholder="Ex: Caíque Eduardo" value="Caíque Eduardo" required>
-                    <small class="form-hint">Ao conectar a API do Freshservice, o nome é atualizado automaticamente pelo seu perfil.</small>
+                    <small class="form-hint">Usado no relatório e na identificação das notificações.</small>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="teamsWebhookUrl">URL do Webhook do Teams (Notificação em Tempo Real)</label>
+                    <input type="url" id="teamsWebhookUrl" class="form-input font-mono" placeholder="https://outlook.office.com/webhook/...">
+                    <small class="form-hint">Recebe alertas instantâneos no seu celular sempre que um novo chamado for atribuído ao seu nome.</small>
                 </div>
 
                 <div class="form-group">

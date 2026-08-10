@@ -1,5 +1,5 @@
 /**
- * Godoy FreshOps AI — Agente de Inteligência, OCR por Câmera/Print, Ronda & Gestão de Chamados
+ * Godoy FreshOps AI — Agente de Inteligência, OCR por Câmera/Print, Ronda & Notificações do Teams em Tempo Real
  * Desenvolvido por Godoy Solutions in TECH para Caíque Eduardo
  */
 
@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const DEFAULT_RONDA_SETORES = [
         { id: 1, nome: 'Setor 1 — UTI Adulto & Neonatal', status: 'OK', obs: 'Sem anormalidades encontradas nas estações.', validado: 'Enfermeiro Chefe' },
         { id: 2, nome: 'Setor 2 — Recepção Central & PS', status: 'OK', obs: 'Leitores e impressoras funcionando.', validado: 'Supervisão Recepção' },
-        { id: 3, nome: 'Setor 3 — Bloco Cirúrgico & Internação', status: 'OK', obs: 'Terminais de checagem operacionais.', validado: 'Coordenação Bloco' },
+        { id: 3, nome: 'Setor 3 — Bloco Cirúrgico & Internação', status: 'OK', obs: 'Terminais of checagem operacionais.', validado: 'Coordenação Bloco' },
         { id: 4, nome: 'Setor 4 — Ambulatório & Farmácia', status: 'OK', obs: 'Sistemas de dispensação normais.', validado: 'Farmacêutico Responsável' }
     ];
 
@@ -86,6 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const themeToggleBtn = document.getElementById('themeToggleBtn');
     const themeIcon = document.getElementById('themeIcon');
+    const enableNotificationsBtn = document.getElementById('enableNotificationsBtn');
 
     // Modals
     const ticketModalBackdrop = document.getElementById('ticketModalBackdrop');
@@ -119,12 +120,43 @@ document.addEventListener('DOMContentLoaded', () => {
     const cancelConfigApiModalBtn = document.getElementById('cancelConfigApiModalBtn');
     const apiConfigForm = document.getElementById('apiConfigForm');
     const analystNameInput = document.getElementById('analystNameInput');
+    const teamsWebhookUrl = document.getElementById('teamsWebhookUrl');
     const freshserviceDomain = document.getElementById('freshserviceDomain');
     const freshserviceApiKey = document.getElementById('freshserviceApiKey');
 
     const fetchApiTicketsBtn = document.getElementById('fetchApiTicketsBtn');
     const exportExcelBtn = document.getElementById('exportExcelBtn');
     const copyEmailReportBtn = document.getElementById('copyEmailReportBtn');
+
+    // Notification Permission
+    if (enableNotificationsBtn) {
+        enableNotificationsBtn.addEventListener('click', () => {
+            if ('Notification' in window) {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                        new Notification('Godoy FreshOps AI', {
+                            body: '🔔 Notificações em tempo real ativadas no seu dispositivo!',
+                            icon: 'https://godoysoluintech.netlify.app/logonew.png'
+                        });
+                        alert('✨ Notificações ativadas com sucesso no seu dispositivo!');
+                    } else {
+                        alert('Permissão de notificação negada ou não concedida.');
+                    }
+                });
+            } else {
+                alert('Este navegador não suporta Notificações Push.');
+            }
+        });
+    }
+
+    function triggerTicketAlert(ticketNum, solicitante) {
+        if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('🚨 NOVO CHAMADO ATRIBUÍDO NO TEAMS', {
+                body: `Chamado ${ticketNum} atribuído a você!\nSolicitante: ${solicitante || 'Aguardando validação'}`,
+                icon: 'https://godoysoluintech.netlify.app/logonew.png'
+            });
+        }
+    }
 
     // Theme Management
     let isDark = localStorage.getItem(THEME_KEY) !== 'light';
@@ -153,7 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (raw) {
             try { return JSON.parse(raw); } catch (e) {}
         }
-        return { analystName: 'Caíque Eduardo', domain: 'americas.freshservice.com', apiKey: '' };
+        return { analystName: 'Caíque Eduardo', domain: 'americas.freshservice.com', apiKey: '', webhookUrl: '' };
     }
 
     function updateAnalystUI() {
@@ -165,6 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
     openConfigApiBtn.addEventListener('click', () => {
         const config = getApiConfig();
         analystNameInput.value = config.analystName || 'Caíque Eduardo';
+        if (teamsWebhookUrl) teamsWebhookUrl.value = config.webhookUrl || '';
         freshserviceDomain.value = config.domain || 'americas.freshservice.com';
         freshserviceApiKey.value = config.apiKey || '';
         configApiModalBackdrop.classList.add('active');
@@ -176,10 +209,11 @@ document.addEventListener('DOMContentLoaded', () => {
     apiConfigForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const analystName = analystNameInput.value.trim();
+        const webhookUrl = teamsWebhookUrl ? teamsWebhookUrl.value.trim() : '';
         const domain = freshserviceDomain.value.trim();
         const apiKey = freshserviceApiKey.value.trim();
 
-        localStorage.setItem(API_CONFIG_KEY, JSON.stringify({ analystName, domain, apiKey }));
+        localStorage.setItem(API_CONFIG_KEY, JSON.stringify({ analystName, webhookUrl, domain, apiKey }));
         updateAnalystUI();
         configApiModalBackdrop.classList.remove('active');
         alert('✨ Configurações salvas com sucesso!');
@@ -249,8 +283,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 const text = result.data.text || '';
-                console.log('OCR Extraído:', text);
-
                 const matchNumber = text.match(/\[?(#?SR-\d{5,8}|#?\d{6}|SR-\d{5,8})\]?/i);
                 const ticketNum = matchNumber ? matchNumber[1].replace('[', '').replace(']', '') : '#SR-312654';
 
@@ -314,6 +346,9 @@ document.addEventListener('DOMContentLoaded', () => {
                                 validacao: 'Validado com o Solicitante',
                                 data: new Date().toLocaleDateString('pt-BR')
                             });
+
+                            // Dispara Alerta em Tempo Real
+                            triggerTicketAlert(ticketNum, 'Freshservice API');
                         }
                     });
                     saveTickets(tickets);
@@ -434,6 +469,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 validacao: validation,
                 data: new Date().toLocaleDateString('pt-BR')
             });
+            triggerTicketAlert(number, validation);
         }
 
         saveTickets(tickets);
@@ -486,11 +522,13 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('ticketProblem').value = solicitante ? `Atendimento solicitado por ${solicitante}.` : '';
         document.getElementById('ticketValidation').value = solicitante ? `Validado com ${solicitante}` : '';
         
+        triggerTicketAlert(ticketNum, solicitante);
+
         modalFormTitle.innerHTML = '<i class="ri-magic-line"></i> Novo Chamado Importado do Teams';
         ticketModalBackdrop.classList.add('active');
     });
 
-    // EXPORTAR PLANILHA EXCEL (.XLSX) COM RONDA DIÁRIA NO TOPO E OS 4 BLOCOS ABAIXO
+    // EXPORTAR PLANILHA EXCEL (.XLSX)
     exportExcelBtn.addEventListener('click', () => {
         const config = getApiConfig();
         const analyst = config.analystName || 'Caíque Eduardo';
@@ -510,8 +548,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         excelRows.push(['']);
-        excelRows.push(['---------------------------------- CHAMADOS ATENDIDOS NO PLANTÃO (4 BLOCOS) ----------------------------------']);
-        excelRows.push(['Item', '1. Número do Chamado', '2. Problema Constatado', '3. Solução Efetuada', '4. Validação (Quem Validou)', 'Data']);
+        excelRows.push(['---------------------------------- CHAMADOS ATENDIDOS NO PLANTÃO (4 BLOCOS) ----------------------------------'],
+        ['Item', '1. Número do Chamado', '2. Problema Constatado', '3. Solução Efetuada', '4. Validação (Quem Validou)', 'Data']);
 
         tickets.forEach((t, idx) => {
             excelRows.push([
