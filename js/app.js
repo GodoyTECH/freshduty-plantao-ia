@@ -1,5 +1,5 @@
 /**
- * Godoy FreshOps AI — Agente de Inteligência PWA, OCR por Print/Galeria/Ctrl+V, Ronda & Notificações do Teams em Tempo Real
+ * Godoy FreshOps AI — Agente de Inteligência PWA, OCR Duplo (OCR.space Cloud + Tesseract.js), Ronda & Teams Realtime
  * Desenvolvido por Godoy Solutions in TECH para Caíque Eduardo
  */
 
@@ -277,7 +277,7 @@ document.addEventListener('DOMContentLoaded', () => {
         saveRonda(ronda);
     };
 
-    // OCR SCANNER POR PRINT DE TELA (GALERIA, DROPZONE & CTRL+V PASTE)
+    // OCR HYBRID ENGINE (OCR.space Cloud API + Tesseract.js Local Fallback)
     if (openOcrModalBtn) {
         openOcrModalBtn.addEventListener('click', () => {
             ocrPreviewContainer.style.display = 'none';
@@ -321,10 +321,39 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.readAsDataURL(file);
 
         ocrStatusContainer.style.display = 'block';
-        ocrStatusText.textContent = 'Iniciando inteligência OCR por imagem...';
+        ocrStatusText.textContent = '⚡ Lendo print com o motor de IA OCR.space Cloud...';
 
+        let textExtracted = '';
+
+        // MOTOR 1: OCR.space Cloud API (API Oficial Gratuita)
         try {
-            if (window.Tesseract) {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('apikey', 'K88289874888957');
+            formData.append('language', 'por');
+            formData.append('isOverlayRequired', 'false');
+            formData.append('detectOrientation', 'true');
+            formData.append('scale', 'true');
+
+            const ocrResp = await fetch('https://api.ocr.space/parse/image', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (ocrResp.ok) {
+                const ocrData = await ocrResp.json();
+                if (ocrData && ocrData.ParsedResults && ocrData.ParsedResults.length > 0) {
+                    textExtracted = ocrData.ParsedResults[0].ParsedText || '';
+                }
+            }
+        } catch (cloudErr) {
+            console.warn('OCR.space Cloud offline, acionando Tesseract:', cloudErr);
+        }
+
+        // MOTOR 2: Tesseract.js (Fallback Local se o motor de nuvem falhar)
+        if (!textExtracted && window.Tesseract) {
+            try {
+                ocrStatusText.textContent = 'Lendo com o motor Tesseract local...';
                 const result = await Tesseract.recognize(file, 'por', {
                     logger: m => {
                         if (m.status === 'recognizing text') {
@@ -332,37 +361,49 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                 });
+                textExtracted = result.data.text || '';
+            } catch (tessErr) {
+                console.error('Erro Tesseract local:', tessErr);
+            }
+        }
 
-                const text = result.data.text || '';
-                console.log('OCR Extraído:', text);
-
-                const matchNumber = text.match(/\[?(#?SR-\d{5,8}|#?\d{6}|SR-\d{5,8})\]?/i);
-                const ticketNum = matchNumber ? matchNumber[1].replace('[', '').replace(']', '') : '#SR-312654';
-
-                const matchSolicitante = text.match(/Solicitado por\s*([^\n\r]+)|Requester:\s*([^\n\r]+)/i);
-                const solicitante = matchSolicitante ? (matchSolicitante[1] || matchSolicitante[2]).trim() : '';
-
-                const matchSolucao = text.match(/Solução:\s*([^\n\r]+)|Validado com\s*([^\n\r]+)/i);
-                const solucaoTxt = matchSolucao ? matchSolucao[0] : '';
-
+        if (!textExtracted) {
+            ocrStatusText.textContent = '⚠️ Não foi possível ler o texto automaticamente. Preencha os dados abaixo.';
+            setTimeout(() => {
                 ocrModalBackdrop.classList.remove('active');
-
                 ticketForm.reset();
                 document.getElementById('ticketIdHidden').value = '';
-                document.getElementById('ticketNumber').value = ticketNum.startsWith('#') ? ticketNum : '#' + ticketNum;
-                document.getElementById('ticketProblem').value = solicitante ? `Chamado solicitado por ${solicitante}.` : (text.slice(0, 150) || 'Atendimento de suporte técnico.');
-                document.getElementById('ticketSolution').value = solucaoTxt || 'Solução realizada pelo analista e validada.';
-                document.getElementById('ticketValidation').value = solicitante ? `Validado com ${solicitante}` : 'Validado no local';
-
-                modalFormTitle.innerHTML = '<i class="ri-screenshot-2-line text-teal"></i> Ticket Extraído por OCR (Print/Galeria)';
+                document.getElementById('ticketNumber').value = '#SR-312654';
+                modalFormTitle.innerHTML = '<i class="ri-edit-line text-teal"></i> Preencher Chamado';
                 ticketModalBackdrop.classList.add('active');
-            } else {
-                throw new Error('Tesseract library offline');
-            }
-        } catch (err) {
-            console.error('Erro no OCR:', err);
-            ocrStatusText.textContent = 'Erro ao ler imagem. Preencha manualmente.';
+            }, 1000);
+            return;
         }
+
+        console.log('Texto OCR Extraído:', textExtracted);
+
+        // Regex para extração inteligente dos campos do Freshservice
+        const matchNumber = textExtracted.match(/\[?(#?SR-\d{5,8}|#?\d{6}|SR-\d{5,8}|Ticket\s*#?\s*\d{5,8})\]?/i);
+        const ticketNum = matchNumber ? matchNumber[1].replace('[', '').replace(']', '').replace(/Ticket/i, '').trim() : '#SR-312654';
+
+        const matchSolicitante = textExtracted.match(/Solicitado por\s*([^\n\r]+)|Requester:\s*([^\n\r]+)|Cliente:\s*([^\n\r]+)/i);
+        const solicitante = matchSolicitante ? (matchSolicitante[1] || matchSolicitante[2] || matchSolicitante[3]).trim() : '';
+
+        const matchSolucao = textExtracted.match(/Solução:\s*([^\n\r]+)|Nota de solução:\s*([^\n\r]+)|Resolução:\s*([^\n\r]+)|Validado com\s*([^\n\r]+)/i);
+        const solucaoTxt = matchSolucao ? matchSolucao[0] : '';
+
+        ocrModalBackdrop.classList.remove('active');
+
+        // Preenche o formulário
+        ticketForm.reset();
+        document.getElementById('ticketIdHidden').value = '';
+        document.getElementById('ticketNumber').value = ticketNum.startsWith('#') ? ticketNum : '#' + ticketNum;
+        document.getElementById('ticketProblem').value = solicitante ? `Chamado solicitado por ${solicitante}.` : (textExtracted.slice(0, 180).trim() || 'Atendimento de suporte técnico.');
+        document.getElementById('ticketSolution').value = solucaoTxt || 'Solução realizada pelo analista e validada.';
+        document.getElementById('ticketValidation').value = solicitante ? `Validado com ${solicitante}` : 'Validado com a equipe do setor';
+
+        modalFormTitle.innerHTML = '<i class="ri-sparkling-fill text-teal"></i> Ticket Reconhecido por IA OCR';
+        ticketModalBackdrop.classList.add('active');
     }
 
     // Sync Freshservice API Tickets
