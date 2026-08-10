@@ -1,5 +1,5 @@
 /**
- * Godoy FreshOps AI — Agente de Inteligência, OCR por Câmera/Print, Ronda & Notificações do Teams em Tempo Real
+ * Godoy FreshOps AI — Agente de Inteligência PWA, OCR por Câmera/Print, Ronda & Notificações do Teams em Tempo Real
  * Desenvolvido por Godoy Solutions in TECH para Caíque Eduardo
  */
 
@@ -9,11 +9,42 @@ document.addEventListener('DOMContentLoaded', () => {
     const API_CONFIG_KEY = 'godoy_freshops_api_config';
     const THEME_KEY = 'godoy_freshops_theme';
 
+    // REGISTRO DE SERVICE WORKER PWA PARA CELULAR ANDROID
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('Service Worker PWA registrado com sucesso:', reg))
+            .catch(err => console.error('Erro ao registrar Service Worker:', err));
+    }
+
+    // PWA INSTALL PROMPT HANDLER (INSTALAÇÃO 1-CLIQUE NO ANDROID)
+    let deferredPrompt;
+    const installPwaBtn = document.getElementById('installPwaBtn');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        if (installPwaBtn) {
+            installPwaBtn.style.display = 'inline-flex';
+        }
+    });
+
+    if (installPwaBtn) {
+        installPwaBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log(`Resultado da instalação PWA: ${outcome}`);
+                deferredPrompt = null;
+                installPwaBtn.style.display = 'none';
+            }
+        });
+    }
+
     // Setores Padrão da Ronda Diária
     const DEFAULT_RONDA_SETORES = [
         { id: 1, nome: 'Setor 1 — UTI Adulto & Neonatal', status: 'OK', obs: 'Sem anormalidades encontradas nas estações.', validado: 'Enfermeiro Chefe' },
         { id: 2, nome: 'Setor 2 — Recepção Central & PS', status: 'OK', obs: 'Leitores e impressoras funcionando.', validado: 'Supervisão Recepção' },
-        { id: 3, nome: 'Setor 3 — Bloco Cirúrgico & Internação', status: 'OK', obs: 'Terminais of checagem operacionais.', validado: 'Coordenação Bloco' },
+        { id: 3, nome: 'Setor 3 — Bloco Cirúrgico & Internação', status: 'OK', obs: 'Terminais de checagem operacionais.', validado: 'Coordenação Bloco' },
         { id: 4, nome: 'Setor 4 — Ambulatório & Farmácia', status: 'OK', obs: 'Sistemas de dispensação normais.', validado: 'Farmacêutico Responsável' }
     ];
 
@@ -347,7 +378,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                 data: new Date().toLocaleDateString('pt-BR')
                             });
 
-                            // Dispara Alerta em Tempo Real
                             triggerTicketAlert(ticketNum, 'Freshservice API');
                         }
                     });

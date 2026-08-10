@@ -4,8 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Godoy FreshOps AI — Agente de Gestão de Chamados & Ronda Hospitalar</title>
-    <meta name="description" content="Agente pessoal de inteligência, OCR por câmera/print, notificações do Teams em tempo real e automação Freshservice por Godoy Solutions in TECH.">
+    <meta name="description" content="Agente pessoal de inteligência PWA, OCR por câmera/print, notificações do Teams em tempo real e automação Freshservice por Godoy Solutions in TECH.">
     <meta name="author" content="Godoy Solutions in TECH">
+
+    <!-- PWA Primary & Mobile Standalone Tags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0D9488">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FreshOps AI">
+    <link rel="apple-touch-icon" href="https://godoysoluintech.netlify.app/logonew.png">
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="https://godoysoluintech.netlify.app/logonew.png">
@@ -35,12 +44,15 @@
             <div class="brand-logo">
                 <div class="logo-icon"><i class="ri-robot-line"></i></div>
                 <div>
-                    <h1 class="brand-name">Godoy FreshOps <span class="badge-ai">AI</span></h1>
-                    <p class="brand-subtitle">OCR & Notificações do Teams em Tempo Real</p>
+                    <h1 class="brand-name">Godoy FreshOps <span class="badge-ai">AI APP</span></h1>
+                    <p class="brand-subtitle">PWA Android • OCR & Teams Realtime</p>
                 </div>
             </div>
 
             <div class="header-actions">
+                <button class="btn btn-teal btn-sm" id="installPwaBtn" style="display: none;" title="Instalar App no Celular Android">
+                    <i class="ri-download-cloud-line"></i> <span>Instalar App</span>
+                </button>
                 <button class="btn btn-secondary btn-sm" id="enableNotificationsBtn" title="Ativar Notificações no Celular">
                     <i class="ri-notification-3-line text-teal"></i> <span class="hide-mobile">Alertas</span>
                 </button>
