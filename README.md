@@ -1,97 +1,83 @@
-# 🤖 Godoy FreshOps AI — Agente de Inteligência & Automação Freshservice
+# 🤖 Godoy FreshOps AI — Agente de Inteligência, Ronda Hospitalar & Automação Freshservice
 
 > **Desenvolvido por:** Godoy Solutions in TECH  
 > **Usuário / Analista:** Caíque Eduardo  
-> **Finalidade:** Automação Pessoal de Produtividade & Padronização de Passagem de Plantão de Suporte Técnico  
+> **Finalidade:** Automação Pessoal de Produtividade, Ronda Diária & Passagem de Plantão  
 > **Classificação do Repositório:** 🔒 **PRIVADO & CONFIDENCIAL**  
 
 ---
 
 ## 📌 1. Visão Geral & Proposta de Valor
 
-O **Godoy FreshOps AI** é uma aplicação corporativa pessoal desenvolvida com o propósito de otimizar, padronizar e automatizar a compilação diária dos chamados de suporte técnico hospitalar atendidos no sistema **Freshservice**.
+O **Godoy FreshOps AI** é uma aplicação corporativa pessoal projetada para otimizar, padronizar e automatizar a compilação diária da **Ronda Diária nos 4 Setores Hospitalares** e dos **Chamados de Suporte Técnico** atendidos no **Freshservice**.
 
-Atualmente, ao término de cada plantão, o analista de suporte precisa compilar manualmente os chamados notificados no **Microsoft Teams (AmericasBot)** e encerrados no **Freshservice** para montar o relatório oficial de passagem de plantão e alimentar a planilha corporativa da equipe.
+A ferramenta foi construída com foco em **utilização mobile em smartphones (100% Responsivo)** e desktops, permitindo ao analista registrar o plantão de qualquer lugar do hospital em poucos toques.
 
-Esta aplicação elimina o retrabalho manual, consolidando os atendimentos em **4 blocos padronizados de dados**, gerando relatórios em texto para e-mail com 1 clique e exportando planilhas no formato **Excel (.xlsx)**.
-
----
-
-## 🎯 2. Escopo & Funcionalidades da Aplicação
-
-### 📋 2.1 Estrutura Organizacional em 4 Blocos de Atendimento
-Para cada chamado processado, a ferramenta estrutura rigorosamente as seguintes informações:
-
-1. **📌 1. Número do Chamado (Ticket ID):** Código oficial do chamado no Freshservice (ex: `#SR-312654`).
-2. **⚠️ 2. Problema Constatado:** Descrição técnica resumida da falha relatada (ex: *Leitor de código de barras desconfigurado na recepção da UTI*).
-3. **🛠️ 3. Solução Efetuada:** Ações corretivas aplicadas pelo analista (ex: *Reconfiguração de parâmetros USB, limpeza de fila de impressão e testes de validação*).
-4. **✅ 4. Validação (Quem Validou):** Registro do profissional / setor hospitalar que testou e aprovou a solução (ex: *Validado em conjunto com a Enfermagem / Grazielly Nadja*).
-
-### 🚀 2.2 Principais Recursos de Produtividade
-* ⚡ **Sincronização via REST API v2 do Freshservice:** Leitura automatizada apenas dos chamados encerrados/resolvidos pelo próprio analista no dia.
-* 📊 **Gerador de Planilha Excel (.xlsx):** Exportação imediata em arquivo `.xlsx` com as 4 colunas formatadas para anexar ou colar na planilha corporativa de plantão.
-* 📋 **Gerador de Relatório para E-mail:** Formatação automática em texto estruturado pronto para cópia instantânea (`Ctrl+C`) e colagem no e-mail de passagem de plantão.
-* 💬 **Importador Inteligente do Microsoft Teams:** Leitor de cards do *AmericasBot* que extrai o número do ticket e solicitante mesmo em preenchimento offline.
+ Ela gera relatórios em texto formatado para e-mail com 1 clique e exporta a **Planilha Excel (.xlsx)** automatizada com o bloco da Ronda Diária no cabeçalho e os 4 blocos de chamados abaixo.
 
 ---
 
-## 🛡️ 3. Arquitetura de Segurança, Privacidade & Conformidade (LGPD)
+## 📱 2. Design 100% Responsivo para Smartphone (Celular)
 
-Esta aplicação foi desenvolvida sob os mais rigorosos padrões de segurança da informação corporativa:
-
-### 🔒 3.1 Escopo Restrito ao Usuário (Princípio do Menor Privilégio)
-* **Acesso Exclusivo aos Próprios Chamados:** A requisição REST API do Freshservice consulta estritamente o endpoint filtrado pelo próprio ID do usuário autenticado (`GET /api/v2/tickets?filter="agent_id:me"`).
-* **Sem Acesso a Dados da Empresa/Outros Setores:** A chave de API pessoal do analista possui **exatamente as mesmas permissões** que ele já possui na interface web do Freshservice. Ela não possui privilégios administrativos e não acessa chamados de outros departamentos.
-
-### 🚫 3.2 Zero Armazenamento Externo & Proteção Contra Vazamento (Zero Leak)
-* **Execução Client-Side / Local:** Toda a aplicação roda no navegador do próprio computador corporativo do analista.
-* **Armazenamento Seguro em `localStorage`:** A chave de API e os registros do plantão ficam armazenados exclusivamente na memória local do navegador do dispositivo do analista.
-* **Sem Servidores Intermediários de Terceiros:** Não existem servidores externos, bancos de dados na nuvem não autorizados ou intermediários capturando informações. O tráfego ocorre de forma direta entre o navegador e a API oficial do Freshservice via **HTTPS/TLS criptografado**.
-
-### 🔒 3.3 Código-Fonte Privado
-* O repositório no GitHub está configurado como **`PRIVATE`**, garantindo que nenhum script, fluxo ou estrutura interna corporativa fique exposto publicamente.
+* **Interface Mobile-First:** Botões grandes para toque com os dedos (alvos de toque com no mínimo 44px de altura).
+* **Visão em Cartões Interativos:** Na tela do celular, a tabela de chamados e a ronda hospitalar se transformam automaticamente em cartões empilhados e responsivos.
+* **Ações Rápidas de Acesso Fácil:** Botões de criação manual de chamados, cópia de relatório e exportação Excel organizados estrategicamente na barra de ações.
 
 ---
 
-## 📄 4. Exemplo de Relatório Gerado para E-mail de Plantão
+## 🚶‍♂️ 3. Bloco de Ronda Diária / Primeira Ronda (4 Setores Hospitalares)
 
-```text
-===================================================
-🏥 GODOY FRESHOPS AI — RELATÓRIO DE PASSAGEM DE PLANTÃO
-👤 Analista: Caíque Eduardo | Suporte Técnico
-📅 Data: 10/08/2026 | Turno: Diurno
-===================================================
+Antes dos chamados atendidos, a ferramenta inclui o módulo de registro da **Primeira Ronda Diária** realizada nos 4 setores hospitalares:
 
-✅ CHAMADOS ATENDIDOS E FINALIZADOS:
+1. **Setor 1 — UTI Adulto & Neonatal:** Status (`100% OK / Sem Anormalidades` ou `Com Pendências`), Observações e Quem Validou (ex: *Enfermeiro Chefe*).
+2. **Setor 2 — Recepção Central & PS:** Status, Observações e Quem Validou (ex: *Supervisão Recepção*).
+3. **Setor 3 — Bloco Cirúrgico & Internação:** Status, Observações e Quem Validou (ex: *Coordenação Bloco*).
+4. **Setor 4 — Ambulatório & Farmácia:** Status, Observações e Quem Validou (ex: *Farmacêutico Responsável*).
 
-1. [#SR-312654]
-   • ⚠️ Problema Constatado: Leitor de código de barras desconfigurado na recepção da UTI.
-   • 🛠️ Solução Efetuada: Reconfiguração dos parâmetros USB, limpeza de fila de impressão e testes de leitura.
-   • ✅ Validação: Validado com Grazielly Nadja (Enfermagem UTI)
+---
 
-2. [#SR-312688]
-   • ⚠️ Problema Constatado: Impressora de etiquetas do 3º andar travada em fila de impressão.
-   • 🛠️ Solução Efetuada: Executado script de limpeza de spooler no Windows Server e reiniciado serviço.
-   • ✅ Validação: Validado com Marcos Silva (Supervisão Enfermagem)
+## 📋 4. Estrutura dos 4 Blocos de Atendimento
 
----------------------------------------------------
-📊 TOTAL DE ATENDIMENTOS NO PLANTÃO: 2 Chamados
-===================================================
+Para cada chamado registrado (manualmente ou via API), o sistema organiza:
+
+1. **📌 1. Nº do Chamado (Ticket ID):** Código oficial do Freshservice (ex: `#SR-312654`).
+2. **⚠️ 2. Problema Constatado:** Descrição da falha técnica identificada.
+3. **🛠️ 3. Solução Efetuada:** Resolução / procedimento técnico aplicado.
+4. **✅ 4. Validação (Quem Validou):** Registro do responsável ou setor de enfermagem que testou e validou a solução.
+
+---
+
+## 📊 5. Automação da Planilha Excel & Integração com Google Sheets (Python)
+
+### 📊 5.1 Geração da Planilha Excel (.xlsx)
+O botão **"Planilha Excel (.xlsx)"** gera e faz o download imediato da planilha estruturada da seguinte forma:
+- **Linha 1 a 3:** Cabeçalho com o nome do analista, data e turno.
+- **Bloco da Ronda Diária:** As 4 linhas dos setores hospitalares com o status, observações e quem validou.
+- **Bloco dos Chamados:** A tabela completa com os 4 blocos de dados de cada atendimento do plantão.
+
+### 🐍 5.2 Automação Python & Google Sheets API (`automation/freshops.py`)
+No diretório [`automation/freshops.py`](automation/freshops.py), fornecemos o script em **Python 3 moderno** que utiliza:
+- `requests`: Para consultar a REST API v2 do Freshservice.
+- `openpyxl`: Para estilizar e montar a planilha Excel nativa.
+- `gspread`: Para sincronização automatizada direta com planilhas do **Google Sheets**.
+
+#### Como rodar o script Python:
+```bash
+# Instalar dependências
+pip install requests openpyxl gspread google-auth
+
+# Executar a automação
+python automation/freshops.py
 ```
 
 ---
 
-## 🛠️ 5. Tecnologias Utilizadas
+## 🔒 6. Conformidade de Segurança & Repositório Privado
 
-* **HTML5 & CSS3 Vanilla:** Interface corporativa hospitalar responsiva (Modos Claro / Escuro).
-* **JavaScript ES6+:** Manipulação assíncrona da API v2 do Freshservice.
-* **SheetJS (`xlsx`):** Geração e exportação client-side de planilhas em formato Excel.
-* **RemixIcon:** Iconografia de suporte técnico e infraestrutura médica.
+* **Repositório GitHub 100% PRIVADO:** Garantia de confidencialidade dos processos e logs.
+* **Execução Local & Zero Armazenamento Externo:** Chaves de API e registros do plantão permanecem no `localStorage` do dispositivo do analista.
+* **Escopo Restrito ao Analista:** Consultas REST API restritas apenas ao ID do usuário autenticado no Freshservice.
 
 ---
-
-## 📝 6. Conclusão & Solicitação de Ativação da API Key
-
-A utilização da **API Key pessoal do Freshservice** nesta ferramenta tem como único objetivo a **automação de leitura de dados de suporte do próprio analista**, promovendo ganhos significativos de produtividade, eliminação de erros manuais na passagem de plantão e rastreabilidade dos atendimentos prestados ao hospital.
 
 *Desenvolvido por Godoy Solutions in TECH — 2026*
