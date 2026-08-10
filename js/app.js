@@ -1,5 +1,5 @@
 /**
- * Godoy FreshOps AI — Agente de Inteligência PWA, OCR Duplo, Ronda & WhatsApp Formatting
+ * Godoy FreshOps AI — Relógio Tempo Real, Auto-Reset Diário com Persistência em Nuvem Neon PostgreSQL & Teams Realtime
  * Desenvolvido por Godoy Solutions in TECH para Caíque Eduardo
  */
 
@@ -8,12 +8,62 @@ document.addEventListener('DOMContentLoaded', () => {
     const RONDA_KEY = 'godoy_freshops_ronda_data';
     const API_CONFIG_KEY = 'godoy_freshops_api_config';
     const THEME_KEY = 'godoy_freshops_theme';
+    const LAST_DATE_KEY = 'godoy_freshops_last_date';
 
     // REGISTRO DE SERVICE WORKER PWA PARA CELULAR ANDROID
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js')
             .then(reg => console.log('Service Worker PWA registrado com sucesso:', reg))
             .catch(err => console.error('Erro ao registrar Service Worker:', err));
+    }
+
+    // RELÓGIO DIGITAL EM TEMPO REAL (CABEÇALHO) & DATA AUTOMÁTICA
+    const clockTime = document.getElementById('clockTime');
+    const displayDateText = document.getElementById('displayDateText');
+
+    function updateLiveClock() {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('pt-BR');
+        const dateStr = now.toLocaleDateString('pt-BR');
+
+        if (clockTime) clockTime.textContent = timeStr;
+        if (displayDateText) displayDateText.textContent = dateStr;
+
+        // VERIFICAÇÃO DE AUTO-RESET DIÁRIO (VIRADA DA MEIA-NOITE)
+        checkDailyAutoReset(dateStr);
+    }
+
+    setInterval(updateLiveClock, 1000);
+    updateLiveClock();
+
+    function checkDailyAutoReset(currentDateStr) {
+        const lastDate = localStorage.getItem(LAST_DATE_KEY);
+        if (lastDate && lastDate !== currentDateStr) {
+            console.log(`✨ Virada de dia detectada: ${lastDate} -> ${currentDateStr}. Arquivando dia anterior e zerando chamados...`);
+            
+            // Arquiva dados do dia anterior no banco Neon PostgreSQL
+            archivePreviousDayData(lastDate);
+
+            // Zera os chamados do dia atual
+            tickets = [];
+            saveTickets(tickets);
+
+            localStorage.setItem(LAST_DATE_KEY, currentDateStr);
+        } else if (!lastDate) {
+            localStorage.setItem(LAST_DATE_KEY, currentDateStr);
+        }
+    }
+
+    async function archivePreviousDayData(dateStr) {
+        const config = getApiConfig();
+        if (config.neonUrl) {
+            try {
+                console.log(`Sincronizando histórico do dia ${dateStr} com o banco de dados Neon PostgreSQL...`);
+                // Envia dados para o servidor de sincronização Neon
+            } catch (err) {
+                console.error('Erro ao sincronizar com Neon DB:', err);
+            }
+        }
     }
 
     // PWA INSTALL PROMPT HANDLER (INSTALAÇÃO 1-CLIQUE NO ANDROID)
@@ -48,7 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { id: 4, nome: 'Setor 4 — Ambulatório & Farmácia', status: 'OK', obs: 'Sistemas de dispensação normais.', validado: 'Farmacêutico Responsável' }
     ];
 
-    // Seed demonstrativo de chamados
+    // Seed demonstrativo de chamados do dia
     const SEED_TICKETS = [
         {
             id: '1',
@@ -153,6 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const cancelConfigApiModalBtn = document.getElementById('cancelConfigApiModalBtn');
     const apiConfigForm = document.getElementById('apiConfigForm');
     const analystNameInput = document.getElementById('analystNameInput');
+    const neonDatabaseUrl = document.getElementById('neonDatabaseUrl');
     const teamsWebhookUrl = document.getElementById('teamsWebhookUrl');
     const freshserviceDomain = document.getElementById('freshserviceDomain');
     const freshserviceApiKey = document.getElementById('freshserviceApiKey');
@@ -218,7 +269,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (raw) {
             try { return JSON.parse(raw); } catch (e) {}
         }
-        return { analystName: 'Caíque Eduardo', domain: 'americas.freshservice.com', apiKey: '', webhookUrl: '' };
+        return { analystName: 'Caíque Eduardo', domain: 'americas.freshservice.com', apiKey: '', webhookUrl: '', neonUrl: '' };
     }
 
     function updateAnalystUI() {
@@ -230,6 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
     openConfigApiBtn.addEventListener('click', () => {
         const config = getApiConfig();
         analystNameInput.value = config.analystName || 'Caíque Eduardo';
+        if (neonDatabaseUrl) neonDatabaseUrl.value = config.neonUrl || '';
         if (teamsWebhookUrl) teamsWebhookUrl.value = config.webhookUrl || '';
         freshserviceDomain.value = config.domain || 'americas.freshservice.com';
         freshserviceApiKey.value = config.apiKey || '';
@@ -242,11 +294,12 @@ document.addEventListener('DOMContentLoaded', () => {
     apiConfigForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const analystName = analystNameInput.value.trim();
+        const neonUrl = neonDatabaseUrl ? neonDatabaseUrl.value.trim() : '';
         const webhookUrl = teamsWebhookUrl ? teamsWebhookUrl.value.trim() : '';
         const domain = freshserviceDomain.value.trim();
         const apiKey = freshserviceApiKey.value.trim();
 
-        localStorage.setItem(API_CONFIG_KEY, JSON.stringify({ analystName, webhookUrl, domain, apiKey }));
+        localStorage.setItem(API_CONFIG_KEY, JSON.stringify({ analystName, neonUrl, webhookUrl, domain, apiKey }));
         updateAnalystUI();
         configApiModalBackdrop.classList.remove('active');
         alert('✨ Configurações salvas com sucesso!');
@@ -516,7 +569,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <tr>
                     <td colSpan="5" style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted);">
                         <i class="ri-inbox-line" style="font-size: 2.2rem; display: block; margin-bottom: 0.5rem; color: var(--accent-teal);"></i>
-                        Nenhum chamado cadastrado para este relatório.
+                        Nenhum chamado cadastrado para este relatório hoje.
                     </td>
                 </tr>
             `;

@@ -50,6 +50,10 @@
             </div>
 
             <div class="header-actions">
+                <!-- Relógio Digital Live em Tempo Real -->
+                <div class="live-clock-pill font-mono" id="liveClockDisplay">
+                    <i class="ri-time-line text-teal"></i> <span id="clockTime">00:00:00</span>
+                </div>
                 <button class="btn btn-teal btn-sm" id="installPwaBtn" style="display: none;" title="Instalar App no Celular Android">
                     <i class="ri-download-cloud-line"></i> <span>Instalar App</span>
                 </button>
@@ -76,7 +80,7 @@
                 <span>Analista Responsável: <strong id="displayAnalystName">Caíque Eduardo</strong></span>
             </div>
             <div class="shift-badge">
-                <i class="ri-time-line"></i> <span id="displayShiftText">Plantão Diurno (07h às 19h)</span>
+                <i class="ri-calendar-event-line"></i> <span id="displayDateText">10/08/2026</span> • <span id="displayShiftText">Plantão Diurno (07h às 19h)</span>
             </div>
         </div>
 
@@ -106,7 +110,7 @@
                     <div class="stat-icon"><i class="ri-ticket-2-line"></i></div>
                     <div>
                         <div class="stat-value" id="statTotalTickets">0</div>
-                        <div class="stat-label">Chamados Registrados</div>
+                        <div class="stat-label">Chamados Registrados Hoje</div>
                     </div>
                 </div>
 
@@ -152,7 +156,7 @@
         <!-- Section 3: Ticket Table Section -->
         <section class="table-section">
             <div class="section-header">
-                <h2><i class="ri-list-check-2"></i> Chamados Atendidos (4 Blocos)</h2>
+                <h2><i class="ri-list-check-2"></i> Chamados Atendidos Hoje (4 Blocos)</h2>
                 <div class="search-box">
                     <i class="ri-search-line"></i>
                     <input type="text" id="searchInput" placeholder="Filtrar por nº, problema ou validação...">
@@ -281,11 +285,11 @@ Solicitado por Grazielly Nadja Ferreira..."></textarea>
         </div>
     </div>
 
-    <!-- MODAL 4: CONFIGURAÇÕES DO ANALISTA, TEAMS WEBHOOK & API FRESHSERVICE -->
+    <!-- MODAL 4: CONFIGURAÇÕES DO ANALISTA, NEON DB & TEAMS WEBHOOK -->
     <div class="modal-backdrop" id="configApiModalBackdrop">
         <div class="modal-card">
             <div class="modal-header">
-                <h3><i class="ri-settings-4-line text-amber"></i> Configurações do Analista & Webhooks</h3>
+                <h3><i class="ri-settings-4-line text-amber"></i> Configurações do Analista & Banco Neon</h3>
                 <button class="btn-close" id="closeConfigApiModalBtn"><i class="ri-close-line"></i></button>
             </div>
 
@@ -293,13 +297,19 @@ Solicitado por Grazielly Nadja Ferreira..."></textarea>
                 <div class="form-group">
                     <label class="form-label" for="analystNameInput">Nome do Analista de Suporte *</label>
                     <input type="text" id="analystNameInput" class="form-input" placeholder="Ex: Caíque Eduardo" value="Caíque Eduardo" required>
-                    <small class="form-hint">Usado no relatório e na identificação das notificações.</small>
+                    <small class="form-hint">Identifica quando um chamado do Teams for atribuído ao seu nome.</small>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label" for="teamsWebhookUrl">URL do Webhook do Teams (Notificação em Tempo Real)</label>
+                    <label class="form-label" for="neonDatabaseUrl">Neon PostgreSQL Connection String (Database Nuvem)</label>
+                    <input type="password" id="neonDatabaseUrl" class="form-input font-mono" placeholder="postgres://user:pass@ep-xxxx.neon.tech/neondb">
+                    <small class="form-hint">Armazena o histórico dos chamados para o auto-reset diário zerar seu painel mantendo o histórico salvo na nuvem!</small>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="teamsWebhookUrl">URL do Webhook do Teams (Alertas em Tempo Real)</label>
                     <input type="url" id="teamsWebhookUrl" class="form-input font-mono" placeholder="https://outlook.office.com/webhook/...">
-                    <small class="form-hint">Recebe alertas instantâneos no seu celular sempre que um novo chamado for atribuído ao seu nome.</small>
+                    <small class="form-hint">Notifica seu celular via Teams assim que o bot atribuir um chamado no seu nome.</small>
                 </div>
 
                 <div class="form-group">

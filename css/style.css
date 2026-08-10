@@ -160,8 +160,22 @@ body {
 .header-actions {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.5rem;
     flex-shrink: 0;
+}
+
+/* Relógio Digital Live */
+.live-clock-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: rgba(20, 184, 166, 0.12);
+    border: 1px solid rgba(20, 184, 166, 0.3);
+    color: var(--text-primary);
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 700;
 }
 
 /* Analyst Pill */
@@ -256,7 +270,7 @@ body {
     border: 1px solid var(--border-color);
     border-radius: 16px;
     padding: 1rem;
-    transition: all 0.25 ease;
+    transition: all 0.25s ease;
 }
 .ronda-card:hover {
     border-color: var(--border-color-glow);
@@ -675,9 +689,7 @@ body {
     margin-top: 1.25rem;
 }
 
-/* =========================================================
-   FULL MOBILE OPTIMIZATION (@media max-width: 768px)
-   ========================================================= */
+/* FULL MOBILE OPTIMIZATION (@media max-width: 768px) */
 @media (max-width: 768px) {
     .hide-mobile { display: none !important; }
 
@@ -691,6 +703,11 @@ body {
     
     .brand-subtitle {
         display: none;
+    }
+
+    .live-clock-pill {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
     }
 
     .action-bar {
