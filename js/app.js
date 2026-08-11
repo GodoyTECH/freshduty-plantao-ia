@@ -205,7 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (permission === 'granted') {
                         new Notification('Godoy FreshOps AI', {
                             body: '🔔 Notificações em tempo real ativadas no seu dispositivo!',
-                            icon: 'https://godoysoluintech.netlify.app/logonew.png'
+                            icon: 'https://godoyagent.netlify.app/logonew.png'
                         });
                         alert('✨ Notificações ativadas com sucesso no seu dispositivo!');
                     } else {
@@ -222,7 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if ('Notification' in window && Notification.permission === 'granted') {
             new Notification('🚨 NOVO CHAMADO ATRIBUÍDO NO TEAMS', {
                 body: `Chamado ${ticketNum} atribuído a você!\nSolicitante: ${solicitante || 'Aguardando validação'}`,
-                icon: 'https://godoysoluintech.netlify.app/logonew.png'
+                icon: 'https://godoyagent.netlify.app/logonew.png'
             });
         }
     }
