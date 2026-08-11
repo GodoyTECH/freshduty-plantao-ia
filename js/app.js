@@ -839,8 +839,52 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // ROTINA DE SINCRONIZAÇÃO EM TEMPO REAL COM O NEON POSTGRESQL (API GET /api/get-tickets)
+    async function syncDatabaseTickets() {
+        try {
+            const resp = await fetch('/api/get-tickets');
+            if (resp.ok) {
+                const data = await resp.json();
+                if (data && data.success && Array.isArray(data.tickets) && data.tickets.length > 0) {
+                    let hasNew = false;
+                    data.tickets.forEach(dbTicket => {
+                        const existingIdx = tickets.findIndex(t => t.numero === dbTicket.numero);
+                        if (existingIdx !== -1) {
+                            // Atualiza solução e validação se mudaram
+                            if (tickets[existingIdx].solucao !== dbTicket.solucao || tickets[existingIdx].validacao !== dbTicket.validacao) {
+                                tickets[existingIdx].solucao = dbTicket.solucao;
+                                tickets[existingIdx].validacao = dbTicket.validacao;
+                                hasNew = true;
+                            }
+                        } else {
+                            // Novo chamado vindo do Teams / Power Automate / Neon DB
+                            tickets.unshift({
+                                id: dbTicket.id || Date.now().toString(),
+                                numero: dbTicket.numero,
+                                problema: dbTicket.problema,
+                                solucao: dbTicket.solucao,
+                                validacao: dbTicket.validacao,
+                                data: dbTicket.data || new Date().toLocaleDateString('pt-BR')
+                            });
+                            hasNew = true;
+                            triggerTicketAlert(dbTicket.numero, dbTicket.validacao);
+                        }
+                    });
+
+                    if (hasNew) {
+                        saveTickets(tickets);
+                    }
+                }
+            }
+        } catch (e) {
+            console.log('Poll Neon DB offline, mantendo armazenamento local.');
+        }
+    }
+
     // Initial Execution
     renderRondaGrid();
     renderTable();
     updateStats();
+    syncDatabaseTickets();
+    setInterval(syncDatabaseTickets, 5000);
 });
