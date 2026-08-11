@@ -158,9 +158,10 @@
             <div class="section-header">
                 <h2><i class="ri-list-check-2"></i> Chamados Atendidos (4 Blocos)</h2>
                 <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
-                    <div style="display: flex; align-items: center; gap: 0.4rem; background: var(--bg-card); padding: 0.4rem 0.8rem; border-radius: 10px; border: 1px solid var(--border-color);">
+                    <div style="display: flex; align-items: center; gap: 0.4rem; background: var(--bg-card); padding: 0.4rem 0.8rem; border-radius: 12px; border: 1px solid var(--border-color); backdrop-filter: var(--glass-blur);">
                         <i class="ri-calendar-event-line text-teal"></i>
-                        <input type="date" id="filterDateInput" style="background: transparent; border: none; color: var(--text-primary); font-family: inherit; font-size: 0.88rem; outline: none;" title="Filtrar por Data Específica">
+                        <input type="date" id="filterDateInput" style="background: transparent; border: none; color: var(--text-primary); font-family: inherit; font-size: 0.88rem; outline: none; cursor: pointer;" title="Filtrar por Data Específica">
+                        <button type="button" id="setTodayDateBtn" class="btn btn-sm btn-teal" style="padding: 0.25rem 0.6rem; font-size: 0.78rem; min-height: 28px; border-radius: 8px;" title="Voltar para a data de hoje">⚡ Hoje</button>
                     </div>
                     <div class="search-box">
                         <i class="ri-search-line"></i>

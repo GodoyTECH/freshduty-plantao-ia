@@ -199,11 +199,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const fetchApiTicketsBtn = document.getElementById('fetchApiTicketsBtn');
     const exportExcelBtn = document.getElementById('exportExcelBtn');
     const copyEmailReportBtn = document.getElementById('copyEmailReportBtn');
+    const setTodayDateBtn = document.getElementById('setTodayDateBtn');
 
     // Configura data padrão do filtro para HOJE
     if (filterDateInput) {
         filterDateInput.value = new Date().toISOString().slice(0, 10);
         filterDateInput.addEventListener('change', () => {
+            syncDatabaseTickets(filterDateInput.value);
+        });
+    }
+
+    if (setTodayDateBtn && filterDateInput) {
+        setTodayDateBtn.addEventListener('click', () => {
+            filterDateInput.value = new Date().toISOString().slice(0, 10);
             syncDatabaseTickets(filterDateInput.value);
         });
     }
