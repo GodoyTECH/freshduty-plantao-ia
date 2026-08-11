@@ -1,7 +1,6 @@
 /**
  * Netlify Serverless Function — POST /api/save-ticket
- * Projeto: Godoy FreshOps AI — Salva ou atualiza um chamado manualmente registrado no app diretamente no Neon PostgreSQL
- * Desenvolvido por Godoy Solutions in TECH para Caique Eduardo
+ * Projeto: Godoy FreshOps AI — Salva ou atualiza chamado no Neon PostgreSQL
  */
 
 const { Client } = require('pg');
@@ -19,25 +18,16 @@ exports.handler = async (event, context) => {
     }
 
     if (event.httpMethod !== 'POST') {
-        return {
-            statusCode: 405,
-            headers,
-            body: JSON.stringify({ error: 'Método não permitido. Envie POST.' })
-        };
+        return { statusCode: 405, headers, body: JSON.stringify({ error: 'Método não permitido.' }) };
     }
 
-    const dbUrl = process.env.DATABASE_URL;
+    const rawDbUrl = process.env.DATABASE_URL;
 
-    if (!dbUrl) {
-        console.warn('⚠️ DATABASE_URL não encontrada nas variáveis do Netlify.');
+    if (!rawDbUrl) {
         return {
             statusCode: 200,
             headers,
-            body: JSON.stringify({
-                success: false,
-                source: 'local_storage',
-                message: 'DATABASE_URL não configurada no Netlify Site Settings.'
-            })
+            body: JSON.stringify({ success: false, message: 'DATABASE_URL não configurada no Netlify.' })
         };
     }
 
@@ -49,25 +39,21 @@ exports.handler = async (event, context) => {
         const solucao = payload.solucao || 'Aguardando atendimento';
         const validacao = payload.validacao || 'Em atendimento';
         const analista = payload.analista || 'Caique Eduardo';
-        const isConcluido = solucao && solucao !== 'Aguardando atendimento' && solucao !== 'Aguardando encerramento/atendimento.';
+        const isConcluido = solucao && !solucao.includes('Aguardando');
         const statusAtendimento = isConcluido ? 'CONCLUIDO' : 'EM_ATENDIMENTO';
 
         if (!numero) {
-            return {
-                statusCode: 400,
-                headers,
-                body: JSON.stringify({ error: 'Número de chamado é obrigatório.' })
-            };
+            return { statusCode: 400, headers, body: JSON.stringify({ error: 'Número de chamado obrigatório.' }) };
         }
 
+        const cleanDbUrl = rawDbUrl.split('?')[0];
         const client = new Client({
-            connectionString: dbUrl,
+            connectionString: cleanDbUrl,
             ssl: { rejectUnauthorized: false }
         });
 
         await client.connect();
 
-        // Assegura estrutura da tabela
         await client.query(`
             CREATE TABLE IF NOT EXISTS chamados_historico (
                 id SERIAL PRIMARY KEY,
@@ -82,7 +68,6 @@ exports.handler = async (event, context) => {
             );
         `);
 
-        // Upsert no Neon DB
         const existing = await client.query(
             `SELECT id FROM chamados_historico WHERE numero_chamado = $1 AND data_chamado = CURRENT_DATE`,
             [numero]
@@ -108,16 +93,12 @@ exports.handler = async (event, context) => {
             headers,
             body: JSON.stringify({
                 success: true,
-                message: 'Chamado salvo com sucesso no Neon PostgreSQL!',
+                message: 'Chamado gravado no Neon DB!',
                 ticket: { numero, problema, solucao, validacao, status: statusAtendimento }
             })
         };
     } catch (err) {
-        console.error('Erro ao salvar chamado no Neon DB:', err);
-        return {
-            statusCode: 500,
-            headers,
-            body: JSON.stringify({ error: err.message || 'Erro ao conectar com Neon DB' })
-        };
+        console.error('Erro save-ticket Neon DB:', err);
+        return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
     }
 };

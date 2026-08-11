@@ -1,7 +1,6 @@
 /**
  * Netlify Serverless Function — GET /api/get-tickets
- * Projeto: Godoy FreshOps AI — Busca chamados salvos no Neon DB com filtro por data
- * Desenvolvido por Godoy Solutions in TECH para Caique Eduardo
+ * Projeto: Godoy FreshOps AI — Busca chamados no Neon DB com filtro por data
  */
 
 const { Client } = require('pg');
@@ -18,9 +17,9 @@ exports.handler = async (event, context) => {
         return { statusCode: 200, headers, body: '' };
     }
 
-    const dbUrl = process.env.DATABASE_URL;
+    const rawDbUrl = process.env.DATABASE_URL;
 
-    if (!dbUrl) {
+    if (!rawDbUrl) {
         return {
             statusCode: 200,
             headers,
@@ -34,14 +33,14 @@ exports.handler = async (event, context) => {
     }
 
     try {
+        const cleanDbUrl = rawDbUrl.split('?')[0];
         const client = new Client({
-            connectionString: dbUrl,
+            connectionString: cleanDbUrl,
             ssl: { rejectUnauthorized: false }
         });
 
         await client.connect();
 
-        // Assegura estrutura das tabelas
         await client.query(`
             CREATE TABLE IF NOT EXISTS chamados_historico (
                 id SERIAL PRIMARY KEY,
@@ -108,7 +107,7 @@ exports.handler = async (event, context) => {
             })
         };
     } catch (err) {
-        console.error('Erro ao buscar chamados no Neon DB:', err);
+        console.error('Erro get-tickets Neon DB:', err);
         return {
             statusCode: 500,
             headers,
