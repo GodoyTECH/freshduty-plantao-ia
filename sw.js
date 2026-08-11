@@ -1,8 +1,10 @@
 /**
  * Godoy FreshOps AI — Service Worker PWA para Suporte Offline & Push Notifications
+ * Estratégia: Network-First + Auto-Clean (Força atualização imediata e limpa todo o cache antigo)
+ * Desenvolvido por Godoy Solutions in TECH para Caique Eduardo
  */
 
-const CACHE_NAME = 'freshops-pwa-v1';
+const CACHE_NAME = 'freshops-pwa-v3-redeploy-force';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -11,35 +13,48 @@ const ASSETS_TO_CACHE = [
   './manifest.json'
 ];
 
+// Instalação do Service Worker com ativação imediata
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS_TO_CACHE);
     })
   );
-  self.skipWaiting();
 });
 
+// Limpa TODOS os caches antigos ao ativar
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
+          console.log('🧹 Removendo cache antigo do PWA:', key);
+          return caches.delete(key);
         })
       );
-    })
+    }).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
+// Estratégia Network-First: Sempre busca a versão mais recente na rede. Só usa cache se estiver offline!
 self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return;
+
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
-    })
+    fetch(event.request)
+      .then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseClone);
+          });
+        }
+        return networkResponse;
+      })
+      .catch(() => {
+        return caches.match(event.request);
+      })
   );
 });
 
@@ -48,8 +63,8 @@ self.addEventListener('push', (event) => {
   const data = event.data ? event.data.text() : 'Novo chamado atribuído ao seu nome no Teams!';
   const options = {
     body: data,
-    icon: 'https://godoysoluintech.netlify.app/logonew.png',
-    badge: 'https://godoysoluintech.netlify.app/logonew.png',
+    icon: 'https://godoyagent.netlify.app/logonew.png',
+    badge: 'https://godoyagent.netlify.app/logonew.png',
     vibrate: [200, 100, 200]
   };
 
