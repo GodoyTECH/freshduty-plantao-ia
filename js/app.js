@@ -88,9 +88,9 @@ document.addEventListener('DOMContentLoaded', () => {
         {
             id: '1',
             numero: '#INC-314326',
-            problema: 'Totem do 07º Andar na tela do Tasy (Login e senha), necessário relogin.',
+            problema: 'Informo que o Totem do 07º Andar está na tela do Tasy ( Login e senha ), solicito apoio.',
             solucao: 'Feito relogin.',
-            validacao: 'Acesso REMOTO (Anne Karenine Da Silva Roque)',
+            validacao: 'Acesso REMOTO',
             data: new Date().toLocaleDateString('pt-BR')
         },
         {
@@ -464,7 +464,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         console.log('Texto OCR Extraído:', textExtracted);
 
-        // PARSER ESPECÍFICO DE ALTA PRECISÃO PARA PAINEL FRESHSERVICE
+        // PARSER DE ALTA PRECISÃO (EXTRATO EXATO DE 1 LINHA / PONTO FINAL)
         // 1. Número do Chamado (#INC-xxxxxx, #SR-xxxxxx ou #xxxxxx)
         const matchNumber = textExtracted.match(/\[?(#(?:INC|SR|WO|TK|TICKET)-?\d{5,8}|#(?:INC|SR)?\d{5,8}|(?:INC|SR|WO|TK)-\d{5,8})\]?/i);
         const ticketNum = matchNumber ? matchNumber[1].replace('[', '').replace(']', '').trim() : '#INC-314326';
@@ -473,7 +473,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const matchSolicitante = textExtracted.match(/([A-Z][a-zà-ú]+(?:\s+[A-Z][a-zà-ú]+)+)\s*(?:relatou|solicitou|via Portal)|Solicitado por\s*([^\n\r]+)|Requester:\s*([^\n\r]+)|Cliente:\s*([^\n\r]+)/i);
         const solicitante = matchSolicitante ? (matchSolicitante[1] || matchSolicitante[2] || matchSolicitante[3] || matchSolicitante[4]).trim() : '';
 
-        // 3. Problema Constatado (Busca descrição técnica após "Descrição:" ou "Informo que...")
+        // 3. Problema Constatado (Busca a frase técnica da descrição)
         let problemaTxt = '';
         const descMatches = textExtracted.match(/Descrição:\s*([\s\S]*?)(?:Exibir mais|Conversas|System|Validado por|$)/i);
         if (descMatches && descMatches[1]) {
@@ -494,19 +494,23 @@ document.addEventListener('DOMContentLoaded', () => {
             problemaTxt = itemTxt ? `Item com defeito: ${itemTxt}` : (solicitante ? `Chamado solicitado por ${solicitante}.` : 'Atendimento de suporte técnico.');
         }
 
-        // 4. Solução Efetuada (ex: "Solução aplicada: Feito relogin.")
-        const matchSolucao = textExtracted.match(/(?:Solução aplicada|Solução|Nota de solução|Resolução):\s*([^\n\r]+)/i);
-        const solucaoTxt = matchSolucao ? matchSolucao[1].trim() : 'Feito atendimento e solução do chamado.';
+        // 4. Solução Efetuada: PEGA APENAS A FRASE ATÉ O PRIMEIRO PONTO FINAL (.) E DESCARTA SCRIPTS ABAIXO
+        let solucaoTxt = '';
+        const matchSolucao = textExtracted.match(/(?:Solução aplicada|Solução Efetuada|Solução|Nota de solução|Resolução):\s*([^.\n\r]+(?:\.)?)/i);
+        if (matchSolucao && matchSolucao[1]) {
+            solucaoTxt = matchSolucao[1].trim();
+        } else {
+            solucaoTxt = 'Feito atendimento e solução do chamado.';
+        }
 
-        // 5. Validação (ex: "Validado por: Acesso REMOTO")
-        const matchValidacao = textExtracted.match(/Validado por:\s*([^\n\r]+)|Validado com:\s*([^\n\r]+)/i);
-        let validacaoTxt = matchValidacao ? (matchValidacao[1] || matchValidacao[2]).trim() : '';
-        
-        if (!validacaoTxt && solicitante) {
+        // 5. Validação: PEGA EXATAMENTE APENAS O VALOR APÓS "Validado por:" (SEM ANEXAR O NOME DO SOLICITANTE)
+        let validacaoTxt = '';
+        const matchValidacao = textExtracted.match(/(?:Validado por|Validado com):\s*([^.\n\r]+(?:\.)?)/i);
+        if (matchValidacao && matchValidacao[1]) {
+            validacaoTxt = matchValidacao[1].trim();
+        } else if (solicitante) {
             validacaoTxt = `Validado com ${solicitante}`;
-        } else if (validacaoTxt && solicitante && !validacaoTxt.toLowerCase().includes(solicitante.toLowerCase())) {
-            validacaoTxt = `${validacaoTxt} (${solicitante})`;
-        } else if (!validacaoTxt) {
+        } else {
             validacaoTxt = 'Validado com a equipe do setor';
         }
 
