@@ -96,7 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
         {
             id: '2',
             numero: '#SR-315537',
-            problema: 'Computador do 3º andar travado em fila de impressão (Spooler indisponível).',
+            problema: 'Computador do 3º andar travada em fila de impressão (Spooler indisponível).',
             solucao: 'Normalizado após acesso remoto.',
             validacao: 'Danilo',
             data: new Date().toLocaleDateString('pt-BR')
@@ -747,19 +747,18 @@ document.addEventListener('DOMContentLoaded', () => {
         ticketModalBackdrop.classList.add('active');
     });
 
-    // EXPORTAR PLANILHA EXCEL (.XLSX) — MODELO OFICIAL FORMATADO (CHAMADO | DESCRIÇÃO | RESOLUÇÃO | VALIDADO)
+    // EXPORTAR PLANILHA EXCEL (.XLSX) — MODELO IDÊNTICO À PLANILHA OFICIAL DA EMPRESA
     exportExcelBtn.addEventListener('click', () => {
         const config = getApiConfig();
         const analyst = config.analystName || 'Caique Eduardo';
         const dataHoje = new Date().toLocaleDateString('pt-BR');
 
         const excelRows = [
-            ['PASSAGEM DE PLANTÃO SUPORTE TÉCNICO HOSPITALAR — GODOY FRESHOPS AI'],
-            [`ANALISTA: ${analyst.toUpperCase()} | TURNO: DIURNO (07h às 19h)`],
-            [''],
+            ['PASSAGEM DE PLANTÃO'],
             ['Chamado', 'Descrição', 'Resolução', 'Validado']
         ];
 
+        // Adiciona todos os chamados
         tickets.forEach(t => {
             excelRows.push([
                 t.numero,
@@ -769,9 +768,21 @@ document.addEventListener('DOMContentLoaded', () => {
             ]);
         });
 
-        excelRows.push(['']);
-        excelRows.push([`DATA: ${dataHoje}`]);
-        excelRows.push(['']);
+        // Adiciona linhas vazias idênticas ao modelo original da imagem
+        const emptyRowsNeeded = Math.max(12 - tickets.length, 5);
+        for (let i = 0; i < emptyRowsNeeded; i++) {
+            excelRows.push(['', '', '', '']);
+        }
+
+        // Linha 17 da Imagem Oficial: DATA
+        excelRows.push([`DATA: ${dataHoje}`, '', '', '']);
+
+        // Mais linhas da grade da imagem
+        for (let i = 0; i < 10; i++) {
+            excelRows.push(['', '', '', '']);
+        }
+
+        // BLOCO DESTACADO DA RONDA DIÁRIA (ATRIUM, MDT, PSA, PSI)
         excelRows.push(['========================================================================================']);
         excelRows.push(['QUADRADINHO DE RONDA DIÁRIA (4 SETORES HOSPITALARES: ATRIUM, MDT, PSA, PSI)']);
         excelRows.push(['========================================================================================']);
@@ -788,11 +799,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const worksheet = XLSX.utils.aoa_to_sheet(excelRows);
 
-        // Auto-ajuste de largura de colunas para não cortar nenhum texto ou número
+        // Mescla A1:D1 para o Título "PASSAGEM DE PLANTÃO" exatamente como na foto!
+        worksheet['!merges'] = [
+            { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } }
+        ];
+
+        // Largura responsiva perfeita para nenhuma palavra ser cortada ou sobreposta
         worksheet['!cols'] = [
-            { wch: 18 }, // Coluna A: Chamado / Setor
-            { wch: 60 }, // Coluna B: Descrição / Status
-            { wch: 60 }, // Coluna C: Resolução / Observação
+            { wch: 22 }, // Coluna A: Chamado / Setor
+            { wch: 65 }, // Coluna B: Descrição / Status
+            { wch: 65 }, // Coluna C: Resolução / Observação
             { wch: 35 }  // Coluna D: Validado
         ];
 
