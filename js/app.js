@@ -371,7 +371,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // OCR HYBRID ENGINE
+    // OCR HYBRID ENGINE (OCR.space Cloud API + Tesseract.js Local Fallback)
     if (openOcrModalBtn) {
         openOcrModalBtn.addEventListener('click', () => {
             ocrPreviewContainer.style.display = 'none';
@@ -471,58 +471,61 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        console.log('Texto OCR Extraído:', textExtracted);
+
+        // 1. Extrai Número do Chamado (#INC-xxxxxx / #SR-xxxxxx)
         const matchNumber = textExtracted.match(/\[?(#(?:INC|SR|WO|TK|TICKET)-?\d{5,8}|#(?:INC|SR)?\d{5,8}|(?:INC|SR|WO|TK)-\d{5,8})\]?/i);
         const ticketNum = matchNumber ? matchNumber[1].replace('[', '').replace(']', '').trim() : '#INC-314326';
 
-        const matchSolicitante = textExtracted.match(/([A-Z][a-zà-ú]+(?:\s+[A-Z][a-zà-ú]+)+)\s*(?:relatou|solicitou|via Portal)|Solicitado por\s*([^\n\r]+)|Requester:\s*([^\n\r]+)|Cliente:\s*([^\n\r]+)/i);
-        const solicitante = matchSolicitante ? (matchSolicitante[1] || matchSolicitante[2] || matchSolicitante[3] || matchSolicitante[4]).trim() : '';
+        // 2. Extrai Solicitante ou Diagnostocado
+        const diagMatch = textExtracted.match(/(?:Diagnosticado|Solicitado por|Requester|Cliente):\s*([^\n\r.]+)/i);
+        const solicitante = diagMatch ? diagMatch[1].trim() : '';
 
+        // 3. Extrai estritamente a LINHA DO PROBLEMA APÓS "Descrição:"
         let problemaTxt = '';
-        const descMatches = textExtracted.match(/Descrição:\s*([\s\S]*?)(?:Exibir mais|Conversas|System|Validado por|$)/i);
-        if (descMatches && descMatches[1]) {
-            const lines = descMatches[1].split('\n').map(l => l.trim()).filter(l => 
-                l.length > 5 && 
+        const descRegex = /Descrição:\s*([\s\S]*?)(?:Diagnosticado:|Dispositivo de:|Exibir mais|Conversas|System|Validado por|<|$)/i;
+        const descMatch = textExtracted.match(descRegex);
+
+        if (descMatch && descMatch[1]) {
+            const rawDescLines = descMatch[1].split('\n').map(l => l.trim()).filter(l => 
+                l.length > 3 && 
                 !l.startsWith('Categoria:') && 
                 !l.startsWith('Sub-Categoria:') && 
                 !l.startsWith('Item:') && 
                 !l.startsWith('Unidade Hospitalar:')
             );
-            if (lines.length > 0) {
-                problemaTxt = lines.join(' ').replace(/^Prezados,?\s*bom dia\.?\s*/i, '').trim();
+            if (rawDescLines.length > 0) {
+                // Pega estritamente a primeira linha limpa do problema
+                problemaTxt = rawDescLines[0].replace(/^Prezados,?\s*bom dia\.?\s*/i, '').trim();
+                if (!problemaTxt.endsWith('.')) problemaTxt += '.';
             }
         }
+
         if (!problemaTxt) {
-            const itemMatch = textExtracted.match(/Item:\s*([^\n\r]+)/i);
-            const itemTxt = itemMatch ? itemMatch[1].trim() : '';
-            problemaTxt = itemTxt ? `Item com defeito: ${itemTxt}` : (solicitante ? `Chamado solicitado por ${solicitante}.` : 'Atendimento de suporte técnico.');
+            const subjectMatch = textExtracted.match(/(?:Formata[çc][ãa]o|Impressora|Spooler|Totem|Tasy|Rede|Acesso)[^\n\r]*/i);
+            problemaTxt = subjectMatch ? subjectMatch[0].trim() : (solicitante ? `Chamado solicitado por ${solicitante}.` : 'Atendimento de suporte técnico.');
         }
 
+        // 4. Extrai a Solução
         let solucaoTxt = '';
         const matchSolucao = textExtracted.match(/(?:Solu[çcgao\s]*[ãao]*\s*(?:aplicada|efetuada)?|Nota de solução|Resolução):\s*([^.\n\r]+)/i);
         if (matchSolucao && matchSolucao[1] && matchSolucao[1].trim().length > 1) {
             solucaoTxt = matchSolucao[1].trim();
         } else {
-            const matchFeito = textExtracted.match(/(Feito\s+[^.\n\r]+)/i);
-            if (matchFeito && matchFeito[1]) {
-                solucaoTxt = matchFeito[1].trim();
-            } else {
-                solucaoTxt = 'Feito relogin.';
-            }
+            solucaoTxt = 'Aguardando atendimento / solução';
         }
 
-        if (solucaoTxt) {
-            solucaoTxt = solucaoTxt.replace(/^:\s*/, '').trim();
-            if (!solucaoTxt.endsWith('.')) solucaoTxt += '.';
+        if (solucaoTxt && !solucaoTxt.endsWith('.')) {
+            solucaoTxt += '.';
         }
 
+        // 5. Validação
         let validacaoTxt = '';
-        const matchValidacao = textExtracted.match(/(?:Validado por|Validado com):\s*([^.\n\r]+(?:\.)?)/i);
-        if (matchValidacao && matchValidacao[1]) {
-            validacaoTxt = matchValidacao[1].trim();
-        } else if (solicitante) {
+        if (solicitante) {
             validacaoTxt = `Validado com ${solicitante}`;
         } else {
-            validacaoTxt = 'Validado com a equipe do setor';
+            const matchVal = textExtracted.match(/(?:Validado por|Validado com):\s*([^.\n\r]+)/i);
+            validacaoTxt = matchVal ? `Validado com ${matchVal[1].trim()}` : 'Em atendimento';
         }
 
         ocrModalBackdrop.classList.remove('active');
@@ -960,7 +963,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (resp.ok) {
                 const data = await resp.json();
                 if (data && data.success && Array.isArray(data.tickets)) {
-                    // Se foi selecionada uma data específica no filtro, substitui a lista exibida pela data escolhida
                     if (selectedDate) {
                         tickets = data.tickets.map(t => ({
                             id: t.id,
@@ -975,7 +977,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         return;
                     }
 
-                    // Sincronizador de hoje
                     let hasNew = false;
                     data.tickets.forEach(dbTicket => {
                         const existingIdx = tickets.findIndex(t => t.numero === dbTicket.numero);
