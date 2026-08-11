@@ -75,12 +75,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Setores Padrão da Ronda Diária
+    // Setores Oficiais da Ronda Diária Hospitalar (ATRIUM, MDT, PSA, PSI)
     const DEFAULT_RONDA_SETORES = [
-        { id: 1, nome: 'Setor 1 — UTI Adulto & Neonatal', status: 'OK', obs: '', validado: 'Enfermeiro Chefe' },
-        { id: 2, nome: 'Setor 2 — Recepção Central & PS', status: 'OK', obs: '', validado: 'Supervisão Recepção' },
-        { id: 3, nome: 'Setor 3 — Bloco Cirúrgico & Internação', status: 'OK', obs: '', validado: 'Coordenação Bloco' },
-        { id: 4, nome: 'Setor 4 — Ambulatório & Farmácia', status: 'OK', obs: '', validado: 'Farmacêutico Responsável' }
+        { id: 1, nome: 'ATRIUM', status: 'OK', obs: '', validado: 'Equipe ATRIUM' },
+        { id: 2, nome: 'MDT', status: 'OK', obs: '', validado: 'Equipe MDT' },
+        { id: 3, nome: 'PSA', status: 'OK', obs: '', validado: 'Equipe PSA' },
+        { id: 4, nome: 'PSI', status: 'OK', obs: '', validado: 'Equipe PSI' }
     ];
 
     // Seed demonstrativo de chamados do dia
@@ -95,10 +95,10 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         {
             id: '2',
-            numero: '#SR-312688',
-            problema: 'Impressora de etiquetas do 3º andar travada em fila de impressão (Spooler indisponível).',
-            solucao: 'Executado script de limpeza da pasta PRINTERS e reiniciado serviço Spooler no Windows Server.',
-            validacao: 'Validado com Marcos Silva (Supervisão Enfermagem)',
+            numero: '#SR-315537',
+            problema: 'Computador do 3º andar travado em fila de impressão (Spooler indisponível).',
+            solucao: 'Normalizado após acesso remoto.',
+            validacao: 'Danilo',
             data: new Date().toLocaleDateString('pt-BR')
         }
     ];
@@ -290,7 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
         alert('✨ Configurações salvas com sucesso!');
     });
 
-    // Render Ronda Diária (OCULTA OBS EM 100% OK PARA SCRIPT ENXUTO)
+    // Render Ronda Diária (ATRIUM, MDT, PSA, PSI)
     function renderRondaGrid() {
         if (!rondaGrid) return;
         rondaGrid.innerHTML = ronda.map((setor, idx) => `
@@ -465,15 +465,12 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('Texto OCR Extraído:', textExtracted);
 
         // PARSER DE ALTA PRECISÃO (EXTRATO EXATO DE 1 LINHA / PONTO FINAL)
-        // 1. Número do Chamado (#INC-xxxxxx, #SR-xxxxxx ou #xxxxxx)
         const matchNumber = textExtracted.match(/\[?(#(?:INC|SR|WO|TK|TICKET)-?\d{5,8}|#(?:INC|SR)?\d{5,8}|(?:INC|SR|WO|TK)-\d{5,8})\]?/i);
         const ticketNum = matchNumber ? matchNumber[1].replace('[', '').replace(']', '').trim() : '#INC-314326';
 
-        // 2. Solicitante (ex: "Anne Karenine Da Silva Roque relatou...")
         const matchSolicitante = textExtracted.match(/([A-Z][a-zà-ú]+(?:\s+[A-Z][a-zà-ú]+)+)\s*(?:relatou|solicitou|via Portal)|Solicitado por\s*([^\n\r]+)|Requester:\s*([^\n\r]+)|Cliente:\s*([^\n\r]+)/i);
         const solicitante = matchSolicitante ? (matchSolicitante[1] || matchSolicitante[2] || matchSolicitante[3] || matchSolicitante[4]).trim() : '';
 
-        // 3. Problema Constatado (Busca a frase técnica da descrição)
         let problemaTxt = '';
         const descMatches = textExtracted.match(/Descrição:\s*([\s\S]*?)(?:Exibir mais|Conversas|System|Validado por|$)/i);
         if (descMatches && descMatches[1]) {
@@ -494,15 +491,11 @@ document.addEventListener('DOMContentLoaded', () => {
             problemaTxt = itemTxt ? `Item com defeito: ${itemTxt}` : (solicitante ? `Chamado solicitado por ${solicitante}.` : 'Atendimento de suporte técnico.');
         }
 
-        // 4. Solução Efetuada: PEGA A FRASE ATÓ O PRIMEIRO PONTO FINAL APÓS "Solução aplicada:" (tolerante a OCR sem acento)
         let solucaoTxt = '';
-        
-        // Tentativa A: Match tolerante a variações de OCR (Solução aplicada, Solucao aplicada, Solugao aplicada, Solucao:, etc.)
-        const matchSolucao = textExtracted.match(/(?:Solu[çcg\s]*[ãao]*\s*(?:aplicada|efetuada)?|Nota de solução|Resolução):\s*([^.\n\r]+)/i);
+        const matchSolucao = textExtracted.match(/(?:Solu[çcgao\s]*[ãao]*\s*(?:aplicada|efetuada)?|Nota de solução|Resolução):\s*([^.\n\r]+)/i);
         if (matchSolucao && matchSolucao[1] && matchSolucao[1].trim().length > 1) {
             solucaoTxt = matchSolucao[1].trim();
         } else {
-            // Tentativa B: Procura por "Feito ..." na imagem
             const matchFeito = textExtracted.match(/(Feito\s+[^.\n\r]+)/i);
             if (matchFeito && matchFeito[1]) {
                 solucaoTxt = matchFeito[1].trim();
@@ -516,7 +509,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!solucaoTxt.endsWith('.')) solucaoTxt += '.';
         }
 
-        // 5. Validação: PEGA EXATAMENTE APENAS O VALOR APÓS "Validado por:" (SEM ANEXAR O NOME DO SOLICITANTE)
         let validacaoTxt = '';
         const matchValidacao = textExtracted.match(/(?:Validado por|Validado com):\s*([^.\n\r]+(?:\.)?)/i);
         if (matchValidacao && matchValidacao[1]) {
@@ -529,7 +521,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         ocrModalBackdrop.classList.remove('active');
 
-        // Preenche o formulário para o usuário salvar ou editar
         ticketForm.reset();
         document.getElementById('ticketIdHidden').value = '';
         document.getElementById('ticketNumber').value = ticketNum.startsWith('#') ? ticketNum : '#' + ticketNum;
@@ -606,7 +597,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateAnalystUI();
     }
 
-    // Render Table (4 Blocos)
+    // Render Table (4 Colunas Oficiais: Chamado | Descrição | Resolução | Validado)
     function renderTable() {
         if (!ticketsTableBody) return;
         const query = searchInput.value.toLowerCase().trim();
@@ -756,41 +747,55 @@ document.addEventListener('DOMContentLoaded', () => {
         ticketModalBackdrop.classList.add('active');
     });
 
-    // EXPORTAR PLANILHA EXCEL (.XLSX)
+    // EXPORTAR PLANILHA EXCEL (.XLSX) — MODELO OFICIAL FORMATADO (CHAMADO | DESCRIÇÃO | RESOLUÇÃO | VALIDADO)
     exportExcelBtn.addEventListener('click', () => {
         const config = getApiConfig();
         const analyst = config.analystName || 'Caique Eduardo';
+        const dataHoje = new Date().toLocaleDateString('pt-BR');
 
         const excelRows = [
-            ['========================================================================================'],
-            [`PASSAGEM DE PLANTÃO SUPORTE TÉCNICO HOSPITALAR — ANALISTA: ${analyst.toUpperCase()}`],
-            [`DATA: ${new Date().toLocaleDateString('pt-BR')} | TURNO: DIURNO (07h às 19h)`],
-            ['========================================================================================'],
+            ['PASSAGEM DE PLANTÃO SUPORTE TÉCNICO HOSPITALAR — GODOY FRESHOPS AI'],
+            [`ANALISTA: ${analyst.toUpperCase()} | TURNO: DIURNO (07h às 19h)`],
             [''],
-            ['---------------------------------- RONDA DIÁRIA / PRIMEIRA RONDA (4 SETORES) ----------------------------------'],
-            ['Setor Hospitalar', 'Status da Ronda', 'Observações / Ocorrências', 'Validado Por']
+            ['Chamado', 'Descrição', 'Resolução', 'Validado']
         ];
 
-        ronda.forEach(r => {
-            excelRows.push([r.nome, r.status, r.obs || 'Sem anormalidades', r.validado]);
-        });
-
-        excelRows.push(['']);
-        excelRows.push(['---------------------------------- CHAMADOS ATENDIDOS NO PLANTÃO (4 BLOCOS) ----------------------------------'],
-        ['Item', '1. Número do Chamado', '2. Problema Constatado', '3. Solução Efetuada', '4. Validação (Quem Validou)', 'Data']);
-
-        tickets.forEach((t, idx) => {
+        tickets.forEach(t => {
             excelRows.push([
-                idx + 1,
                 t.numero,
                 t.problema,
                 t.solucao,
-                t.validacao,
-                t.data
+                t.validacao
+            ]);
+        });
+
+        excelRows.push(['']);
+        excelRows.push([`DATA: ${dataHoje}`]);
+        excelRows.push(['']);
+        excelRows.push(['========================================================================================']);
+        excelRows.push(['QUADRADINHO DE RONDA DIÁRIA (4 SETORES HOSPITALARES: ATRIUM, MDT, PSA, PSI)']);
+        excelRows.push(['========================================================================================']);
+        excelRows.push(['Setor Hospitalar', 'Status da Ronda', 'Observações / Pendências', 'Validado Por']);
+
+        ronda.forEach(r => {
+            excelRows.push([
+                r.nome,
+                r.status === 'OK' ? '🟢 100% OK / Sem Anormalidades' : '🟡 Com Pendência Técnica',
+                r.obs || 'Sem anormalidades',
+                r.validado || 'Equipe do setor'
             ]);
         });
 
         const worksheet = XLSX.utils.aoa_to_sheet(excelRows);
+
+        // Auto-ajuste de largura de colunas para não cortar nenhum texto ou número
+        worksheet['!cols'] = [
+            { wch: 18 }, // Coluna A: Chamado / Setor
+            { wch: 60 }, // Coluna B: Descrição / Status
+            { wch: 60 }, // Coluna C: Resolução / Observação
+            { wch: 35 }  // Coluna D: Validado
+        ];
+
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Passagem de Plantão');
 
@@ -810,7 +815,7 @@ document.addEventListener('DOMContentLoaded', () => {
         report += `📅 Data: ${dataHoje} | Turno: Diurno (07h às 19h)\n`;
         report += `===================================================\n\n`;
 
-        report += `WALK / PRIMEIRA RONDA (4 SETORES):\n`;
+        report += `WALK / PRIMEIRA RONDA (4 SETORES: ATRIUM, MDT, PSA, PSI):\n`;
         ronda.forEach(r => {
             report += `  • ${r.nome}: [${r.status}] ${r.status === 'PENDENTE' ? '- ' + r.obs : ''} (${r.validado})\n`;
         });
@@ -850,14 +855,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     data.tickets.forEach(dbTicket => {
                         const existingIdx = tickets.findIndex(t => t.numero === dbTicket.numero);
                         if (existingIdx !== -1) {
-                            // Atualiza solução e validação se mudaram
                             if (tickets[existingIdx].solucao !== dbTicket.solucao || tickets[existingIdx].validacao !== dbTicket.validacao) {
                                 tickets[existingIdx].solucao = dbTicket.solucao;
                                 tickets[existingIdx].validacao = dbTicket.validacao;
                                 hasNew = true;
                             }
                         } else {
-                            // Novo chamado vindo do Teams / Power Automate / Neon DB
                             tickets.unshift({
                                 id: dbTicket.id || Date.now().toString(),
                                 numero: dbTicket.numero,
