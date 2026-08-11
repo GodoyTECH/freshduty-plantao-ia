@@ -494,13 +494,26 @@ document.addEventListener('DOMContentLoaded', () => {
             problemaTxt = itemTxt ? `Item com defeito: ${itemTxt}` : (solicitante ? `Chamado solicitado por ${solicitante}.` : 'Atendimento de suporte técnico.');
         }
 
-        // 4. Solução Efetuada: PEGA APENAS A FRASE ATÉ O PRIMEIRO PONTO FINAL (.) E DESCARTA SCRIPTS ABAIXO
+        // 4. Solução Efetuada: PEGA A FRASE ATÓ O PRIMEIRO PONTO FINAL APÓS "Solução aplicada:" (tolerante a OCR sem acento)
         let solucaoTxt = '';
-        const matchSolucao = textExtracted.match(/(?:Solução aplicada|Solução Efetuada|Solução|Nota de solução|Resolução):\s*([^.\n\r]+(?:\.)?)/i);
-        if (matchSolucao && matchSolucao[1]) {
+        
+        // Tentativa A: Match tolerante a variações de OCR (Solução aplicada, Solucao aplicada, Solugao aplicada, Solucao:, etc.)
+        const matchSolucao = textExtracted.match(/(?:Solu[çcg\s]*[ãao]*\s*(?:aplicada|efetuada)?|Nota de solução|Resolução):\s*([^.\n\r]+)/i);
+        if (matchSolucao && matchSolucao[1] && matchSolucao[1].trim().length > 1) {
             solucaoTxt = matchSolucao[1].trim();
         } else {
-            solucaoTxt = 'Feito atendimento e solução do chamado.';
+            // Tentativa B: Procura por "Feito ..." na imagem
+            const matchFeito = textExtracted.match(/(Feito\s+[^.\n\r]+)/i);
+            if (matchFeito && matchFeito[1]) {
+                solucaoTxt = matchFeito[1].trim();
+            } else {
+                solucaoTxt = 'Feito relogin.';
+            }
+        }
+
+        if (solucaoTxt) {
+            solucaoTxt = solucaoTxt.replace(/^:\s*/, '').trim();
+            if (!solucaoTxt.endsWith('.')) solucaoTxt += '.';
         }
 
         // 5. Validação: PEGA EXATAMENTE APENAS O VALOR APÓS "Validado por:" (SEM ANEXAR O NOME DO SOLICITANTE)
