@@ -1,0 +1,12 @@
+{
+  "name": "freshduty-plantao-ia",
+  "version": "1.0.0",
+  "description": "Godoy FreshOps AI — PWA & Netlify Serverless Webhooks com Neon DB",
+  "main": "js/app.js",
+  "scripts": {
+    "build": "echo 'No build step required'"
+  },
+  "dependencies": {
+    "pg": "^8.11.3"
+  }
+}
