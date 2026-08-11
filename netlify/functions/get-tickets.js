@@ -1,6 +1,6 @@
 /**
  * Netlify Serverless Function — GET /api/get-tickets
- * Projeto: Godoy FreshOps AI — Busca chamados salvos no Neon DB para o app atualizar em tempo real
+ * Projeto: Godoy FreshOps AI — Busca chamados salvos no Neon DB com filtro por data
  * Desenvolvido por Godoy Solutions in TECH para Caique Eduardo
  */
 
@@ -27,7 +27,7 @@ exports.handler = async (event, context) => {
             body: JSON.stringify({
                 success: true,
                 source: 'local_storage',
-                message: 'DATABASE_URL não configurada no Netlify. Usando armazenamento local.',
+                message: 'DATABASE_URL não configurada no Netlify.',
                 tickets: []
             })
         };
@@ -41,34 +41,60 @@ exports.handler = async (event, context) => {
 
         await client.connect();
 
-        // Assegura estrutura da tabela
+        // Assegura estrutura das tabelas
         await client.query(`
             CREATE TABLE IF NOT EXISTS chamados_historico (
                 id SERIAL PRIMARY KEY,
                 data_chamado DATE NOT NULL DEFAULT CURRENT_DATE,
                 numero_chamado VARCHAR(100) NOT NULL,
                 problema_constatado TEXT NOT NULL,
-                solucao_efetuada TEXT NOT NULL,
-                validado_por VARCHAR(255) NOT NULL,
+                solucao_efetuada TEXT NOT NULL DEFAULT 'Aguardando atendimento',
+                validado_por VARCHAR(255) NOT NULL DEFAULT 'Em atendimento',
+                status_atendimento VARCHAR(50) NOT NULL DEFAULT 'EM_ATENDIMENTO',
                 analista_nome VARCHAR(255) DEFAULT 'Caique Eduardo',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
 
-        // Busca chamados salvos hoje
-        const result = await client.query(`
-            SELECT 
-                id::text,
-                numero_chamado as numero,
-                problema_constatado as problema,
-                solucao_efetuada as solucao,
-                validado_por as validacao,
-                TO_CHAR(data_chamado, 'DD/MM/YYYY') as data,
-                created_at
-            FROM chamados_historico
-            WHERE data_chamado = CURRENT_DATE
-            ORDER BY id DESC;
-        `);
+        const filterDate = (event.queryStringParameters && event.queryStringParameters.date) ? event.queryStringParameters.date : null;
+
+        let query = '';
+        let queryParams = [];
+
+        if (filterDate) {
+            query = `
+                SELECT 
+                    id::text,
+                    numero_chamado as numero,
+                    problema_constatado as problema,
+                    solucao_efetuada as solucao,
+                    validado_por as validacao,
+                    COALESCE(status_atendimento, 'EM_ATENDIMENTO') as status_atendimento,
+                    TO_CHAR(data_chamado, 'DD/MM/YYYY') as data,
+                    created_at
+                FROM chamados_historico
+                WHERE data_chamado = $1::date
+                ORDER BY id DESC;
+            `;
+            queryParams = [filterDate];
+        } else {
+            query = `
+                SELECT 
+                    id::text,
+                    numero_chamado as numero,
+                    problema_constatado as problema,
+                    solucao_efetuada as solucao,
+                    validado_por as validacao,
+                    COALESCE(status_atendimento, 'EM_ATENDIMENTO') as status_atendimento,
+                    TO_CHAR(data_chamado, 'DD/MM/YYYY') as data,
+                    created_at
+                FROM chamados_historico
+                WHERE data_chamado = CURRENT_DATE
+                ORDER BY id DESC;
+            `;
+        }
+
+        const result = await client.query(query, queryParams);
 
         await client.end();
 

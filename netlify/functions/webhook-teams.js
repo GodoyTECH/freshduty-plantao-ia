@@ -80,15 +80,21 @@ exports.handler = async (event, context) => {
             }
         }
 
-        // 4. Solução Efetuada
+        // 4. Solução Efetuada & Status do Atendimento
         let solucao = payload.solucao || payload.solucao_efetuada;
+        let isConcluido = false;
+
         if (!solucao) {
             const solucaoMatch = rawText.match(/(?:Solu[çcgao\s]*[ãao]*\s*(?:aplicada|efetuada)?|Nota de solução|Resolução):\s*([^.\n\r<]+)/i);
-            if (solucaoMatch && solucaoMatch[1]) {
+            if (solucaoMatch && solucaoMatch[1] && solucaoMatch[1].trim().length > 1) {
                 solucao = solucaoMatch[1].replace(/<[^>]*>/g, '').trim();
+                isConcluido = true;
             } else {
-                solucao = 'Aguardando encerramento/atendimento.';
+                solucao = 'Aguardando atendimento / solução';
+                isConcluido = false;
             }
+        } else {
+            isConcluido = true;
         }
 
         if (solucao && !solucao.endsWith('.')) solucao += '.';
@@ -102,10 +108,11 @@ exports.handler = async (event, context) => {
             } else if (solicitante) {
                 validacao = `Validado com ${solicitante}`;
             } else {
-                validacao = 'Em atendimento';
+                validacao = isConcluido ? 'Validado com o solicitante' : 'Em atendimento';
             }
         }
 
+        const statusAtendimento = isConcluido ? 'CONCLUIDO' : 'EM_ATENDIMENTO';
         const analista = payload.analista || 'Caique Eduardo';
 
         const dbUrl = process.env.DATABASE_URL;
@@ -125,8 +132,9 @@ exports.handler = async (event, context) => {
                     data_chamado DATE NOT NULL DEFAULT CURRENT_DATE,
                     numero_chamado VARCHAR(100) NOT NULL,
                     problema_constatado TEXT NOT NULL,
-                    solucao_efetuada TEXT NOT NULL,
-                    validado_por VARCHAR(255) NOT NULL,
+                    solucao_efetuada TEXT NOT NULL DEFAULT 'Aguardando atendimento',
+                    validado_por VARCHAR(255) NOT NULL DEFAULT 'Em atendimento',
+                    status_atendimento VARCHAR(50) NOT NULL DEFAULT 'EM_ATENDIMENTO',
                     analista_nome VARCHAR(255) DEFAULT 'Caique Eduardo',
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
@@ -138,14 +146,14 @@ exports.handler = async (event, context) => {
             if (existing.rows.length > 0) {
                 await client.query(`
                     UPDATE chamados_historico
-                    SET solucao_efetuada = $1, validado_por = $2, problema_constatado = COALESCE(NULLIF($3, ''), problema_constatado)
-                    WHERE numero_chamado = $4 AND data_chamado = CURRENT_DATE;
-                `, [solucao, validacao, problema, numero]);
+                    SET solucao_efetuada = $1, validado_por = $2, problema_constatado = COALESCE(NULLIF($3, ''), problema_constatado), status_atendimento = $4
+                    WHERE numero_chamado = $5 AND data_chamado = CURRENT_DATE;
+                `, [solucao, validacao, problema, statusAtendimento, numero]);
             } else {
                 await client.query(`
-                    INSERT INTO chamados_historico (numero_chamado, problema_constatado, solucao_efetuada, validado_por, analista_nome)
-                    VALUES ($1, $2, $3, $4, $5);
-                `, [numero, problema, solucao, validacao, analista]);
+                    INSERT INTO chamados_historico (numero_chamado, problema_constatado, solucao_efetuada, validado_por, status_atendimento, analista_nome)
+                    VALUES ($1, $2, $3, $4, $5, $6);
+                `, [numero, problema, solucao, validacao, statusAtendimento, analista]);
             }
 
             await client.end();
@@ -157,7 +165,7 @@ exports.handler = async (event, context) => {
             body: JSON.stringify({
                 success: true,
                 message: 'Chamado processado com sucesso no Godoy FreshOps AI!',
-                ticket: { numero, problema, solucao, validacao, analista }
+                ticket: { numero, problema, solucao, validacao, status: statusAtendimento, analista }
             })
         };
     } catch (err) {
