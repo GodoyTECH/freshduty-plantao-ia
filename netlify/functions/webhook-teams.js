@@ -42,19 +42,71 @@ exports.handler = async (event, context) => {
     try {
         const payload = JSON.parse(event.body || '{}');
 
-        const numero = payload.numero || payload.ticket_id;
-        const problema = payload.problema || payload.descricao || 'Atendimento de suporte técnico via Teams';
-        const solucao = payload.solucao || payload.solucao_efetuada || 'Aguardando encerramento/atendimento.';
-        const validacao = payload.validacao || payload.validado_por || 'Em atendimento';
-        const analista = payload.analista || 'Caique Eduardo';
+        // Se veio mensagem bruta do Teams (mensagem_raw), faz parsing inteligente completo
+        let rawText = '';
+        if (payload.mensagem_raw) {
+            rawText = typeof payload.mensagem_raw === 'string' ? payload.mensagem_raw : JSON.stringify(payload.mensagem_raw);
+        } else {
+            rawText = JSON.stringify(payload);
+        }
+
+        // 1. Número do Chamado (#INC-xxxxxx ou #SR-xxxxxx)
+        let numero = payload.numero || payload.ticket_id;
+        if (!numero) {
+            const numMatch = rawText.match(/\[?(#(?:INC|SR|WO|TK|TICKET)-?\d{5,8}|#(?:INC|SR)?\d{5,8}|(?:INC|SR|WO|TK)-\d{5,8})\]?/i);
+            if (numMatch) numero = numMatch[1].replace('[', '').replace(']', '').trim();
+        }
 
         if (!numero) {
             return {
-                statusCode: 400,
+                statusCode: 200,
                 headers,
-                body: JSON.stringify({ error: 'Número do chamado (#INC- / #SR-) é obrigatório.' })
+                body: JSON.stringify({ ignored: true, message: 'Mensagem recebida não continha número de chamado (#INC- / #SR-).' })
             };
         }
+
+        // 2. Solicitante
+        const solMatch = rawText.match(/Solicitado por\s*([^\n\r:<]+)|([A-Z][a-zà-ú]+(?:\s+[A-Z][a-zà-ú]+)+)\s*(?:relatou|solicitou)/i);
+        const solicitante = solMatch ? (solMatch[1] || solMatch[2]).trim() : '';
+
+        // 3. Problema
+        let problema = payload.problema || payload.descricao;
+        if (!problema) {
+            const descMatch = rawText.match(/Descrição:\s*([\s\S]*?)(?:Exibir mais|Conversas|System|Validado por|<|$)/i);
+            if (descMatch && descMatch[1]) {
+                problema = descMatch[1].replace(/<[^>]*>/g, '').replace(/Prezados,?\s*bom dia\.?/i, '').trim();
+            } else {
+                problema = solicitante ? `Chamado solicitado por ${solicitante}` : 'Atendimento de suporte técnico via Teams';
+            }
+        }
+
+        // 4. Solução Efetuada
+        let solucao = payload.solucao || payload.solucao_efetuada;
+        if (!solucao) {
+            const solucaoMatch = rawText.match(/(?:Solu[çcgao\s]*[ãao]*\s*(?:aplicada|efetuada)?|Nota de solução|Resolução):\s*([^.\n\r<]+)/i);
+            if (solucaoMatch && solucaoMatch[1]) {
+                solucao = solucaoMatch[1].replace(/<[^>]*>/g, '').trim();
+            } else {
+                solucao = 'Aguardando encerramento/atendimento.';
+            }
+        }
+
+        if (solucao && !solucao.endsWith('.')) solucao += '.';
+
+        // 5. Validação
+        let validacao = payload.validacao || payload.validado_por;
+        if (!validacao) {
+            const valMatch = rawText.match(/(?:Validado por|Validado com):\s*([^.\n\r<]+)/i);
+            if (valMatch && valMatch[1]) {
+                validacao = valMatch[1].replace(/<[^>]*>/g, '').trim();
+            } else if (solicitante) {
+                validacao = `Validado com ${solicitante}`;
+            } else {
+                validacao = 'Em atendimento';
+            }
+        }
+
+        const analista = payload.analista || 'Caique Eduardo';
 
         const dbUrl = process.env.DATABASE_URL;
 
@@ -104,7 +156,7 @@ exports.handler = async (event, context) => {
             headers,
             body: JSON.stringify({
                 success: true,
-                message: 'Chamado processado com sucesso com token de segurança!',
+                message: 'Chamado processado com sucesso no Godoy FreshOps AI!',
                 ticket: { numero, problema, solucao, validacao, analista }
             })
         };
