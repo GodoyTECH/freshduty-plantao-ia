@@ -26,8 +26,18 @@ exports.handler = async (event, context) => {
         };
     }
 
-    // TRAVA DE SEGURANÇA MÁXIMA VIA VARIÁVEL DE AMBIENTE DO NETLIFY
-    const expectedSecret = process.env.WEBHOOK_SECRET_KEY || 'godoy_tech_secret_key_2026';
+    // AUDITORIA DE SEGURANÇA MÁXIMA VIA VARIÁVEL DE AMBIENTE DO NETLIFY
+    const expectedSecret = process.env.WEBHOOK_SECRET_KEY;
+
+    if (!expectedSecret) {
+        console.error('❌ ERRO CRÍTICO DE SEGURANÇA: WEBHOOK_SECRET_KEY não configurada nas Variáveis de Ambiente do Netlify.');
+        return {
+            statusCode: 500,
+            headers,
+            body: JSON.stringify({ error: 'Erro de Segurança no Servidor: Variável WEBHOOK_SECRET_KEY não configurada no Netlify.' })
+        };
+    }
+
     const providedSecret = event.headers['x-webhook-secret'] || event.headers['X-Webhook-Secret'] || (event.queryStringParameters && event.queryStringParameters.secret);
 
     if (!providedSecret || providedSecret !== expectedSecret) {
