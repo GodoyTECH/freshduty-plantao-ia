@@ -91,14 +91,16 @@ document.addEventListener('DOMContentLoaded', () => {
             problema: 'Informo que o Totem do 07º Andar está na tela do Tasy ( Login e senha ), solicito apoio.',
             solucao: 'Feito relogin.',
             validacao: 'Acesso REMOTO',
+            status_atendimento: 'CONCLUIDO',
             data: new Date().toLocaleDateString('pt-BR')
         },
         {
             id: '2',
             numero: '#SR-315537',
             problema: 'Computador do 3º andar travada em fila de impressão (Spooler indisponível).',
-            solucao: 'Normalizado após acesso remoto.',
-            validacao: 'Danilo',
+            solucao: 'Aguardando atendimento / solução',
+            validacao: 'Em atendimento',
+            status_atendimento: 'EM_ATENDIMENTO',
             data: new Date().toLocaleDateString('pt-BR')
         }
     ];
@@ -145,6 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const rondaGrid = document.getElementById('rondaGrid');
     const ticketsTableBody = document.getElementById('ticketsTableBody');
     const searchInput = document.getElementById('searchInput');
+    const filterDateInput = document.getElementById('filterDateInput');
     const statTotalTickets = document.getElementById('statTotalTickets');
     const statValidatedTickets = document.getElementById('statValidatedTickets');
     const statRondaStatus = document.getElementById('statRondaStatus');
@@ -196,6 +199,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const fetchApiTicketsBtn = document.getElementById('fetchApiTicketsBtn');
     const exportExcelBtn = document.getElementById('exportExcelBtn');
     const copyEmailReportBtn = document.getElementById('copyEmailReportBtn');
+
+    // Configura data padrão do filtro para HOJE
+    if (filterDateInput) {
+        filterDateInput.value = new Date().toISOString().slice(0, 10);
+        filterDateInput.addEventListener('change', () => {
+            syncDatabaseTickets(filterDateInput.value);
+        });
+    }
 
     // Notification Permission
     if (enableNotificationsBtn) {
@@ -360,7 +371,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // OCR HYBRID ENGINE (OCR.space Cloud API + Tesseract.js Local Fallback)
+    // OCR HYBRID ENGINE
     if (openOcrModalBtn) {
         openOcrModalBtn.addEventListener('click', () => {
             ocrPreviewContainer.style.display = 'none';
@@ -377,7 +388,6 @@ document.addEventListener('DOMContentLoaded', () => {
     closeOcrModalBtn.addEventListener('click', () => ocrModalBackdrop.classList.remove('active'));
     cancelOcrModalBtn.addEventListener('click', () => ocrModalBackdrop.classList.remove('active'));
 
-    // COLA DIRETA VIA CTRL+V NO NAVEGADOR
     window.addEventListener('paste', (e) => {
         const items = (e.clipboardData || e.originalEvent.clipboardData).items;
         for (let item of items) {
@@ -460,8 +470,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 1000);
             return;
         }
-
-        console.log('Texto OCR Extraído:', textExtracted);
 
         const matchNumber = textExtracted.match(/\[?(#(?:INC|SR|WO|TK|TICKET)-?\d{5,8}|#(?:INC|SR)?\d{5,8}|(?:INC|SR|WO|TK)-\d{5,8})\]?/i);
         const ticketNum = matchNumber ? matchNumber[1].replace('[', '').replace(']', '').trim() : '#INC-314326';
@@ -612,23 +620,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 <tr>
                     <td colSpan="5" style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted);">
                         <i class="ri-inbox-line" style="font-size: 2.2rem; display: block; margin-bottom: 0.5rem; color: var(--accent-teal);"></i>
-                        Nenhum chamado cadastrado para este relatório hoje.
+                        Nenhum chamado cadastrado para esta data.
                     </td>
                 </tr>
             `;
             return;
         }
 
-        ticketsTableBody.innerHTML = filtered.map(t => `
+        ticketsTableBody.innerHTML = filtered.map(t => {
+            const isEmAtendimento = !t.solucao || t.solucao.includes('Aguardando') || t.status_atendimento === 'EM_ATENDIMENTO';
+            
+            return `
             <tr>
                 <td>
                     <span class="ticket-badge font-mono">${t.numero}</span>
+                    <br>
+                    <span style="font-size: 0.72rem; padding: 0.15rem 0.4rem; border-radius: 4px; display: inline-block; margin-top: 0.2rem; font-weight: 700; background: ${isEmAtendimento ? 'rgba(234, 179, 8, 0.15)' : 'rgba(16, 185, 129, 0.15)'}; color: ${isEmAtendimento ? '#EAB308' : '#10B981'};">
+                        ${isEmAtendimento ? '🟡 EM ATENDIMENTO' : '🟢 CONCLUÍDO'}
+                    </span>
                 </td>
                 <td>
                     <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.2rem;">${t.problema}</div>
                 </td>
                 <td>
-                    <div style="color: var(--text-secondary); line-height: 1.5;">${t.solucao}</div>
+                    <div style="color: ${isEmAtendimento ? '#EAB308' : 'var(--text-secondary)'}; line-height: 1.5; font-style: ${isEmAtendimento ? 'italic' : 'normal'};">
+                        ${t.solucao}
+                    </div>
                 </td>
                 <td>
                     <div style="color: var(--accent-teal); font-weight: 700;">
@@ -646,7 +663,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </td>
             </tr>
-        `).join('');
+        `}).join('');
     }
 
     if (searchInput) searchInput.addEventListener('input', renderTable);
@@ -664,7 +681,7 @@ document.addEventListener('DOMContentLoaded', () => {
     closeTicketModalBtn.addEventListener('click', () => ticketModalBackdrop.classList.remove('active'));
     cancelTicketModalBtn.addEventListener('click', () => ticketModalBackdrop.classList.remove('active'));
 
-    ticketForm.addEventListener('submit', (e) => {
+    ticketForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('ticketIdHidden').value;
         const number = document.getElementById('ticketNumber').value.trim();
@@ -672,25 +689,43 @@ document.addEventListener('DOMContentLoaded', () => {
         const solution = document.getElementById('ticketSolution').value.trim();
         const validation = document.getElementById('ticketValidation').value.trim();
 
+        const formattedNum = number.startsWith('#') ? number : '#' + number;
+        const config = getApiConfig();
+
+        const newTicketObj = {
+            id: id || Date.now().toString(),
+            numero: formattedNum,
+            problema: problem,
+            solucao: solution,
+            validacao: validation,
+            analista: config.analystName || 'Caique Eduardo',
+            data: new Date().toLocaleDateString('pt-BR')
+        };
+
         if (id) {
             const idx = tickets.findIndex(t => t.id === id);
             if (idx !== -1) {
-                tickets[idx] = { ...tickets[idx], numero: number, problema: problem, solucao: solution, validacao: validation };
+                tickets[idx] = { ...tickets[idx], ...newTicketObj };
             }
         } else {
-            tickets.unshift({
-                id: Date.now().toString(),
-                numero: number.startsWith('#') ? number : '#' + number,
-                problema: problem,
-                solucao: solution,
-                validacao: validation,
-                data: new Date().toLocaleDateString('pt-BR')
-            });
-            triggerTicketAlert(number, validation);
+            tickets.unshift(newTicketObj);
+            triggerTicketAlert(formattedNum, validation);
         }
 
         saveTickets(tickets);
         ticketModalBackdrop.classList.remove('active');
+
+        // ENVIA PERSISTÊNCIA MANUAL PARA O NEON POSTGRESQL (API POST /api/save-ticket)
+        try {
+            await fetch('/api/save-ticket', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newTicketObj)
+            });
+            console.log('✨ Chamado persistido com sucesso no Neon DB!');
+        } catch (dbErr) {
+            console.warn('Persistência Neon DB indisponível via HTTP, mantido em localStorage:', dbErr);
+        }
     });
 
     window.editTicket = (id) => {
@@ -705,10 +740,21 @@ document.addEventListener('DOMContentLoaded', () => {
         ticketModalBackdrop.classList.add('active');
     };
 
-    window.deleteTicket = (id) => {
+    window.deleteTicket = async (id) => {
         if (confirm('Tem certeza que deseja remover este chamado?')) {
+            const target = tickets.find(t => t.id === id);
             tickets = tickets.filter(t => t.id !== id);
             saveTickets(tickets);
+
+            if (target && target.numero) {
+                try {
+                    await fetch('/api/delete-ticket', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ numero: target.numero })
+                    });
+                } catch (e) {}
+            }
         }
     };
 
@@ -749,9 +795,8 @@ document.addEventListener('DOMContentLoaded', () => {
     exportExcelBtn.addEventListener('click', () => {
         const config = getApiConfig();
         const analyst = config.analystName || 'Caique Eduardo';
-        const dataHoje = new Date().toLocaleDateString('pt-BR');
+        const dataHoje = filterDateInput && filterDateInput.value ? new Date(filterDateInput.value + 'T00:00:00').toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR');
 
-        // MONTA O HTML DA TABELA COM ESTILOS INLINE IDENTICOS À IMAGEM 1 DA EMPRESA
         let htmlTable = `
             <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
             <head>
@@ -784,12 +829,9 @@ document.addEventListener('DOMContentLoaded', () => {
             </head>
             <body>
                 <table>
-                    <!-- LINHA 1: TÍTULO CENTRALIZADO MESCLADO -->
                     <tr>
                         <th colspan="4" class="title-row">PASSAGEM DE PLANTÃO</th>
                     </tr>
-
-                    <!-- LINHA 2: CABEÇALHOS DAS COLUNAS COM AS CORES OFICIAIS DA FOTO DA EMPRESA -->
                     <tr>
                         <th class="header-chamado" style="width: 140px;">Chamado</th>
                         <th class="header-descricao" style="width: 450px;">Descrição</th>
@@ -798,7 +840,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     </tr>
         `;
 
-        // LINHAS DOS CHAMADOS ATENDIDOS
         tickets.forEach(t => {
             htmlTable += `
                 <tr>
@@ -810,7 +851,6 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         });
 
-        // COMPLETA AS LINHAS DA GRADE ATÉ A LINHA 16
         const emptyRowsNeeded = Math.max(12 - tickets.length, 5);
         for (let i = 0; i < emptyRowsNeeded; i++) {
             htmlTable += `
@@ -820,14 +860,12 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         }
 
-        // LINHA 17 DA FOTO DA EMPRESA: DATA
         htmlTable += `
             <tr>
                 <td colspan="4" class="data-row">DATA: ${dataHoje}</td>
             </tr>
         `;
 
-        // MAIS LINHAS DA GRADE
         for (let i = 0; i < 6; i++) {
             htmlTable += `
                 <tr class="empty-row">
@@ -836,7 +874,6 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         }
 
-        // SEGUNDA TABELA: PASSAGEM DE RONDA DIÁRIA (SEM QUADRADINHOS OU TEXTOS EXTRA)
         htmlTable += `
                     <tr>
                         <th class="header-chamado">Setor Hospitalar</th>
@@ -863,7 +900,6 @@ document.addEventListener('DOMContentLoaded', () => {
             </html>
         `;
 
-        // GERA E BAIXA O ARQUIVO EXCEL STYLED COMPATÍVEL COM O MICROSOFT EXCEL
         const blob = new Blob([htmlTable], { type: 'application/vnd.ms-excel;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -879,7 +915,7 @@ document.addEventListener('DOMContentLoaded', () => {
     copyEmailReportBtn.addEventListener('click', () => {
         const config = getApiConfig();
         const analyst = config.analystName || 'Caique Eduardo';
-        const dataHoje = new Date().toLocaleDateString('pt-BR');
+        const dataHoje = filterDateInput && filterDateInput.value ? new Date(filterDateInput.value + 'T00:00:00').toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR');
 
         let report = `===================================================\n`;
         report += `🏥 GODOY FRESHOPS AI — PASSAGEM DE PLANTÃO SUPORTE TÉCNICO\n`;
@@ -917,12 +953,29 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ROTINA DE SINCRONIZAÇÃO EM TEMPO REAL COM O NEON POSTGRESQL (API GET /api/get-tickets)
-    async function syncDatabaseTickets() {
+    async function syncDatabaseTickets(selectedDate = null) {
         try {
-            const resp = await fetch('/api/get-tickets');
+            const url = selectedDate ? `/api/get-tickets?date=${selectedDate}` : '/api/get-tickets';
+            const resp = await fetch(url);
             if (resp.ok) {
                 const data = await resp.json();
-                if (data && data.success && Array.isArray(data.tickets) && data.tickets.length > 0) {
+                if (data && data.success && Array.isArray(data.tickets)) {
+                    // Se foi selecionada uma data específica no filtro, substitui a lista exibida pela data escolhida
+                    if (selectedDate) {
+                        tickets = data.tickets.map(t => ({
+                            id: t.id,
+                            numero: t.numero,
+                            problema: t.problema,
+                            solucao: t.solucao,
+                            validacao: t.validacao,
+                            status_atendimento: t.status_atendimento || 'EM_ATENDIMENTO',
+                            data: t.data
+                        }));
+                        saveTickets(tickets);
+                        return;
+                    }
+
+                    // Sincronizador de hoje
                     let hasNew = false;
                     data.tickets.forEach(dbTicket => {
                         const existingIdx = tickets.findIndex(t => t.numero === dbTicket.numero);
@@ -930,6 +983,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             if (tickets[existingIdx].solucao !== dbTicket.solucao || tickets[existingIdx].validacao !== dbTicket.validacao) {
                                 tickets[existingIdx].solucao = dbTicket.solucao;
                                 tickets[existingIdx].validacao = dbTicket.validacao;
+                                tickets[existingIdx].status_atendimento = dbTicket.status_atendimento;
                                 hasNew = true;
                             }
                         } else {
@@ -939,6 +993,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 problema: dbTicket.problema,
                                 solucao: dbTicket.solucao,
                                 validacao: dbTicket.validacao,
+                                status_atendimento: dbTicket.status_atendimento || 'EM_ATENDIMENTO',
                                 data: dbTicket.data || new Date().toLocaleDateString('pt-BR')
                             });
                             hasNew = true;
@@ -961,5 +1016,8 @@ document.addEventListener('DOMContentLoaded', () => {
     renderTable();
     updateStats();
     syncDatabaseTickets();
-    setInterval(syncDatabaseTickets, 5000);
+    setInterval(() => {
+        const currentDateFilter = filterDateInput ? filterDateInput.value : null;
+        syncDatabaseTickets(currentDateFilter);
+    }, 5000);
 });
