@@ -317,7 +317,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.updateRondaField = (idx, field, val) => {
         ronda[idx][field] = val;
-        // Se mudou para OK, limpa a observação
         if (field === 'status' && val === 'OK') {
             ronda[idx].obs = '';
         }
@@ -325,7 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderRondaGrid();
     };
 
-    // COPIAR RONDA DIÁRIA FORMATADA CONCISA PARA WHATSAPP (SEM OBS EM 100% OK)
+    // COPIAR RONDA DIÁRIA FORMATADA CONCISA PARA WHATSAPP
     if (copyRondaWhatsAppBtn) {
         copyRondaWhatsAppBtn.addEventListener('click', () => {
             const config = getApiConfig();
@@ -464,7 +463,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         console.log('Texto OCR Extraído:', textExtracted);
 
-        // PARSER DE ALTA PRECISÃO (EXTRATO EXATO DE 1 LINHA / PONTO FINAL)
         const matchNumber = textExtracted.match(/\[?(#(?:INC|SR|WO|TK|TICKET)-?\d{5,8}|#(?:INC|SR)?\d{5,8}|(?:INC|SR|WO|TK)-\d{5,8})\]?/i);
         const ticketNum = matchNumber ? matchNumber[1].replace('[', '').replace(']', '').trim() : '#INC-314326';
 
@@ -747,76 +745,134 @@ document.addEventListener('DOMContentLoaded', () => {
         ticketModalBackdrop.classList.add('active');
     });
 
-    // EXPORTAR PLANILHA EXCEL (.XLSX) — MODELO IDÊNTICO À PLANILHA OFICIAL DA EMPRESA
+    // EXPORTAR PLANILHA EXCEL (.XLS) COM ESTILOS COMPLETOS (CORES DA IMAGEM 1, CENTRALIZADO, BORDAS)
     exportExcelBtn.addEventListener('click', () => {
         const config = getApiConfig();
         const analyst = config.analystName || 'Caique Eduardo';
         const dataHoje = new Date().toLocaleDateString('pt-BR');
 
-        const excelRows = [
-            ['PASSAGEM DE PLANTÃO'],
-            ['Chamado', 'Descrição', 'Resolução', 'Validado']
-        ];
+        // MONTA O HTML DA TABELA COM ESTILOS INLINE IDENTICOS À IMAGEM 1 DA EMPRESA
+        let htmlTable = `
+            <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+            <head>
+                <meta charset="utf-8">
+                <!--[if gte mso 9]>
+                <xml>
+                <x:ExcelWorkbook>
+                    <x:ExcelWorksheets>
+                        <x:ExcelWorksheet>
+                            <x:Name>Passagem de Plantão</x:Name>
+                            <x:WorksheetOptions>
+                                <x:DisplayGridlines/>
+                            </x:WorksheetOptions>
+                        </x:ExcelWorksheet>
+                    </x:ExcelWorksheets>
+                </x:ExcelWorkbook>
+                </xml>
+                <![endif]-->
+                <style>
+                    table { border-collapse: collapse; width: 100%; font-family: Calibri, sans-serif; }
+                    th, td { border: 1px solid #000000; vertical-align: middle; padding: 6px 10px; }
+                    .title-row { background-color: #FFFFFF; font-size: 16pt; font-weight: bold; text-align: center; height: 40px; }
+                    .header-chamado { background-color: #5B9BD5; color: #FFFFFF; font-weight: bold; text-align: center; font-size: 11pt; }
+                    .header-descricao { background-color: #9DC3E6; color: #000000; font-weight: bold; text-align: center; font-size: 11pt; }
+                    .header-resolucao { background-color: #B4C6E7; color: #000000; font-weight: bold; text-align: center; font-size: 11pt; }
+                    .header-validado { background-color: #C6EFCE; color: #000000; font-weight: bold; text-align: center; font-size: 11pt; }
+                    .data-row { font-weight: bold; background-color: #F2F2F2; text-align: left; }
+                    .empty-row { height: 22px; }
+                </style>
+            </head>
+            <body>
+                <table>
+                    <!-- LINHA 1: TÍTULO CENTRALIZADO MESCLADO -->
+                    <tr>
+                        <th colspan="4" class="title-row">PASSAGEM DE PLANTÃO</th>
+                    </tr>
 
-        // Adiciona todos os chamados
+                    <!-- LINHA 2: CABEÇALHOS DAS COLUNAS COM AS CORES OFICIAIS DA FOTO DA EMPRESA -->
+                    <tr>
+                        <th class="header-chamado" style="width: 140px;">Chamado</th>
+                        <th class="header-descricao" style="width: 450px;">Descrição</th>
+                        <th class="header-resolucao" style="width: 450px;">Resolução</th>
+                        <th class="header-validado" style="width: 250px;">Validado</th>
+                    </tr>
+        `;
+
+        // LINHAS DOS CHAMADOS ATENDIDOS
         tickets.forEach(t => {
-            excelRows.push([
-                t.numero,
-                t.problema,
-                t.solucao,
-                t.validacao
-            ]);
+            htmlTable += `
+                <tr>
+                    <td style="text-align: center; font-weight: bold;">${t.numero}</td>
+                    <td>${t.problema}</td>
+                    <td>${t.solucao}</td>
+                    <td style="text-align: center;">${t.validacao}</td>
+                </tr>
+            `;
         });
 
-        // Adiciona linhas vazias idênticas ao modelo original da imagem
+        // COMPLETA AS LINHAS DA GRADE ATÉ A LINHA 16
         const emptyRowsNeeded = Math.max(12 - tickets.length, 5);
         for (let i = 0; i < emptyRowsNeeded; i++) {
-            excelRows.push(['', '', '', '']);
+            htmlTable += `
+                <tr class="empty-row">
+                    <td></td><td></td><td></td><td></td>
+                </tr>
+            `;
         }
 
-        // Linha 17 da Imagem Oficial: DATA
-        excelRows.push([`DATA: ${dataHoje}`, '', '', '']);
+        // LINHA 17 DA FOTO DA EMPRESA: DATA
+        htmlTable += `
+            <tr>
+                <td colspan="4" class="data-row">DATA: ${dataHoje}</td>
+            </tr>
+        `;
 
-        // Mais linhas da grade da imagem
-        for (let i = 0; i < 10; i++) {
-            excelRows.push(['', '', '', '']);
+        // MAIS LINHAS DA GRADE
+        for (let i = 0; i < 6; i++) {
+            htmlTable += `
+                <tr class="empty-row">
+                    <td></td><td></td><td></td><td></td>
+                </tr>
+            `;
         }
 
-        // BLOCO DESTACADO DA RONDA DIÁRIA (ATRIUM, MDT, PSA, PSI)
-        excelRows.push(['========================================================================================']);
-        excelRows.push(['QUADRADINHO DE RONDA DIÁRIA (4 SETORES HOSPITALARES: ATRIUM, MDT, PSA, PSI)']);
-        excelRows.push(['========================================================================================']);
-        excelRows.push(['Setor Hospitalar', 'Status da Ronda', 'Observações / Pendências', 'Validado Por']);
+        // SEGUNDA TABELA: PASSAGEM DE RONDA DIÁRIA (SEM QUADRADINHOS OU TEXTOS EXTRA)
+        htmlTable += `
+                    <tr>
+                        <th class="header-chamado">Setor Hospitalar</th>
+                        <th class="header-descricao">Status da Ronda</th>
+                        <th class="header-resolucao">Observação / Pendência</th>
+                        <th class="header-validado">Validado Por</th>
+                    </tr>
+        `;
 
         ronda.forEach(r => {
-            excelRows.push([
-                r.nome,
-                r.status === 'OK' ? '🟢 100% OK / Sem Anormalidades' : '🟡 Com Pendência Técnica',
-                r.obs || 'Sem anormalidades',
-                r.validado || 'Equipe do setor'
-            ]);
+            htmlTable += `
+                <tr>
+                    <td style="font-weight: bold;">${r.nome}</td>
+                    <td style="text-align: center;">${r.status === 'OK' ? '🟢 100% OK' : '🟡 Com Pendência'}</td>
+                    <td>${r.obs || 'Sem anormalidades'}</td>
+                    <td style="text-align: center;">${r.validado || 'Equipe do setor'}</td>
+                </tr>
+            `;
         });
 
-        const worksheet = XLSX.utils.aoa_to_sheet(excelRows);
+        htmlTable += `
+                </table>
+            </body>
+            </html>
+        `;
 
-        // Mescla A1:D1 para o Título "PASSAGEM DE PLANTÃO" exatamente como na foto!
-        worksheet['!merges'] = [
-            { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } }
-        ];
-
-        // Largura responsiva perfeita para nenhuma palavra ser cortada ou sobreposta
-        worksheet['!cols'] = [
-            { wch: 22 }, // Coluna A: Chamado / Setor
-            { wch: 65 }, // Coluna B: Descrição / Status
-            { wch: 65 }, // Coluna C: Resolução / Observação
-            { wch: 35 }  // Coluna D: Validado
-        ];
-
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'Passagem de Plantão');
-
-        const fileName = `Passagem_Plantao_${analyst.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.xlsx`;
-        XLSX.writeFile(workbook, fileName);
+        // GERA E BAIXA O ARQUIVO EXCEL STYLED COMPATÍVEL COM O MICROSOFT EXCEL
+        const blob = new Blob([htmlTable], { type: 'application/vnd.ms-excel;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Passagem_Plantao_${analyst.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.xls`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     });
 
     // COPIAR RELATÓRIO FORMATADO PARA E-MAIL DE PLANTÃO
