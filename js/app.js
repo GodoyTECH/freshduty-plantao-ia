@@ -981,7 +981,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             status_atendimento: t.status_atendimento || 'EM_ATENDIMENTO',
                             data: t.data
                         }));
-                        saveTickets(tickets);
+                        renderTable();
+                        updateStats();
                         return;
                     }
 

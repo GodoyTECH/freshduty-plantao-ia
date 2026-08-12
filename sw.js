@@ -4,7 +4,7 @@
  * Desenvolvido por Godoy Solutions in TECH para Caique Eduardo
  */
 
-const CACHE_NAME = 'freshops-pwa-v4-futuristic-force-refresh';
+const CACHE_NAME = 'freshops-pwa-v5-godoytech-brand-colors';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
