@@ -967,53 +967,23 @@ document.addEventListener('DOMContentLoaded', () => {
     async function syncDatabaseTickets(selectedDate = null) {
         try {
             const url = selectedDate ? `/api/get-tickets?date=${selectedDate}` : '/api/get-tickets';
-            const resp = await fetch(url);
+            const resp = await fetch(url, { cache: 'no-store' });
             if (resp.ok) {
                 const data = await resp.json();
-                if (data && data.success && Array.isArray(data.tickets)) {
-                    if (selectedDate) {
-                        tickets = data.tickets.map(t => ({
-                            id: t.id,
-                            numero: t.numero,
-                            problema: t.problema,
-                            solucao: t.solucao,
-                            validacao: t.validacao,
-                            status_atendimento: t.status_atendimento || 'EM_ATENDIMENTO',
-                            data: t.data
-                        }));
-                        renderTable();
-                        updateStats();
-                        return;
-                    }
+                if (data && data.success && Array.isArray(data.tickets) && data.tickets.length > 0) {
+                    tickets = data.tickets.map(t => ({
+                        id: t.id || Date.now().toString(),
+                        numero: t.numero,
+                        problema: t.problema,
+                        solucao: t.solucao,
+                        validacao: t.validacao,
+                        status_atendimento: t.status_atendimento || 'EM_ATENDIMENTO',
+                        data: t.data || new Date().toLocaleDateString('pt-BR')
+                    }));
 
-                    let hasNew = false;
-                    data.tickets.forEach(dbTicket => {
-                        const existingIdx = tickets.findIndex(t => t.numero === dbTicket.numero);
-                        if (existingIdx !== -1) {
-                            if (tickets[existingIdx].solucao !== dbTicket.solucao || tickets[existingIdx].validacao !== dbTicket.validacao) {
-                                tickets[existingIdx].solucao = dbTicket.solucao;
-                                tickets[existingIdx].validacao = dbTicket.validacao;
-                                tickets[existingIdx].status_atendimento = dbTicket.status_atendimento;
-                                hasNew = true;
-                            }
-                        } else {
-                            tickets.unshift({
-                                id: dbTicket.id || Date.now().toString(),
-                                numero: dbTicket.numero,
-                                problema: dbTicket.problema,
-                                solucao: dbTicket.solucao,
-                                validacao: dbTicket.validacao,
-                                status_atendimento: dbTicket.status_atendimento || 'EM_ATENDIMENTO',
-                                data: dbTicket.data || new Date().toLocaleDateString('pt-BR')
-                            });
-                            hasNew = true;
-                            triggerTicketAlert(dbTicket.numero, dbTicket.validacao);
-                        }
-                    });
-
-                    if (hasNew) {
-                        saveTickets(tickets);
-                    }
+                    localStorage.setItem('freshops_tickets_v4', JSON.stringify(tickets));
+                    renderTable();
+                    updateStats();
                 }
             }
         } catch (e) {
@@ -1026,6 +996,8 @@ document.addEventListener('DOMContentLoaded', () => {
     renderTable();
     updateStats();
     syncDatabaseTickets();
+
+    // Sincronização em tempo real a cada 5 segundos sem guardar cache antigo
     setInterval(() => {
         const currentDateFilter = filterDateInput ? filterDateInput.value : null;
         syncDatabaseTickets(currentDateFilter);

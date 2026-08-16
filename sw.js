@@ -1,26 +1,14 @@
 /**
  * Godoy FreshOps AI — Service Worker PWA para Suporte Offline & Push Notifications
- * Estratégia: Network-First + Auto-Clean (Força atualização imediata e limpa todo o cache antigo)
+ * Estratégia: Anti-Cache Strict + Auto-Clean (Garante carregamento da última versão a cada F5/Ctrl+F5)
  * Desenvolvido por Godoy Solutions in TECH para Caique Eduardo
  */
 
-const CACHE_NAME = 'freshops-pwa-v5-godoytech-brand-colors';
-const ASSETS_TO_CACHE = [
-  './',
-  './index.html',
-  './css/style.css',
-  './js/app.js',
-  './manifest.json'
-];
+const CACHE_NAME = 'freshops-pwa-v-nocache-v7-latest';
 
-// Instalação do Service Worker com ativação imediata
+// Instalação do Service Worker com ativação imediata sem esperar
 self.addEventListener('install', (event) => {
   self.skipWaiting();
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
-    })
-  );
 });
 
 // Limpa TODOS os caches antigos ao ativar
@@ -29,7 +17,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
-          console.log('🧹 Removendo cache antigo do PWA:', key);
+          console.log('🧹 Limpando cache do PWA para carregar a versão mais recente:', key);
           return caches.delete(key);
         })
       );
@@ -37,24 +25,14 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Estratégia Network-First: Sempre busca a versão mais recente na rede. Só usa cache se estiver offline!
+// Estratégia Network-Only / Strict Fetch para arquivos principais (Garante a versão mais recente)
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
+  // Busca sempre diretamente na rede sem armazenar cache estático pesado
   event.respondWith(
-    fetch(event.request)
-      .then((networkResponse) => {
-        if (networkResponse && networkResponse.status === 200) {
-          const responseClone = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseClone);
-          });
-        }
-        return networkResponse;
-      })
-      .catch(() => {
-        return caches.match(event.request);
-      })
+    fetch(event.request, { cache: 'no-store' })
+      .catch(() => caches.match(event.request))
   );
 });
 
