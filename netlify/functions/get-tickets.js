@@ -1,6 +1,6 @@
 /**
  * Netlify Serverless Function — GET /api/get-tickets
- * Projeto: Godoy FreshOps AI — Busca chamados no Neon DB com filtro por data
+ * Projeto: Godoy FreshOps AI — Busca chamados no Neon DB com filtro por data e fallback automatico
  */
 
 const { Client } = require('pg');
@@ -32,9 +32,11 @@ exports.handler = async (event, context) => {
         };
     }
 
+    let client = null;
+
     try {
         const cleanDbUrl = rawDbUrl.split('?')[0];
-        const client = new Client({
+        client = new Client({
             connectionString: cleanDbUrl,
             ssl: { rejectUnauthorized: false }
         });
@@ -57,11 +59,10 @@ exports.handler = async (event, context) => {
 
         const filterDate = (event.queryStringParameters && event.queryStringParameters.date) ? event.queryStringParameters.date : null;
 
-        let query = '';
-        let queryParams = [];
+        let result;
 
         if (filterDate) {
-            query = `
+            const query = `
                 SELECT 
                     id::text,
                     numero_chamado as numero,
@@ -75,9 +76,12 @@ exports.handler = async (event, context) => {
                 WHERE data_chamado = $1::date
                 ORDER BY id DESC;
             `;
-            queryParams = [filterDate];
-        } else {
-            query = `
+            result = await client.query(query, [filterDate]);
+        }
+
+        // Se não veio resultado na data específica ou se não forneceu data, faz o fallback buscando os chamados mais recentes
+        if (!filterDate || !result || result.rows.length === 0) {
+            const queryFallback = `
                 SELECT 
                     id::text,
                     numero_chamado as numero,
@@ -88,14 +92,11 @@ exports.handler = async (event, context) => {
                     TO_CHAR(data_chamado, 'DD/MM/YYYY') as data,
                     created_at
                 FROM chamados_historico
-                WHERE data_chamado = CURRENT_DATE
-                ORDER BY id DESC;
+                ORDER BY id DESC
+                LIMIT 100;
             `;
+            result = await client.query(queryFallback);
         }
-
-        const result = await client.query(query, queryParams);
-
-        await client.end();
 
         return {
             statusCode: 200,
@@ -113,5 +114,9 @@ exports.handler = async (event, context) => {
             headers,
             body: JSON.stringify({ error: err.message || 'Erro de conexão com o banco Neon' })
         };
+    } finally {
+        if (client) {
+            await client.end().catch(() => {});
+        }
     }
 };

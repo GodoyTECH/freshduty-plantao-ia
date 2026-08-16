@@ -18,15 +18,17 @@ exports.handler = async (event, context) => {
         return { statusCode: 200, headers, body: '' };
     }
 
-    const dbUrl = process.env.DATABASE_URL;
+    const rawDbUrl = process.env.DATABASE_URL;
 
-    if (!dbUrl) {
+    if (!rawDbUrl) {
         return {
             statusCode: 200,
             headers,
             body: JSON.stringify({ success: true, message: 'Local storage delete.' })
         };
     }
+
+    let client = null;
 
     try {
         const payload = JSON.parse(event.body || '{}');
@@ -36,16 +38,15 @@ exports.handler = async (event, context) => {
             return { statusCode: 400, headers, body: JSON.stringify({ error: 'Número de chamado obrigatório.' }) };
         }
 
-        const client = new Client({
-            connectionString: dbUrl,
+        const cleanDbUrl = rawDbUrl.split('?')[0];
+        client = new Client({
+            connectionString: cleanDbUrl,
             ssl: { rejectUnauthorized: false }
         });
 
         await client.connect();
 
         await client.query(`DELETE FROM chamados_historico WHERE numero_chamado = $1`, [numero]);
-
-        await client.end();
 
         return {
             statusCode: 200,
@@ -55,5 +56,9 @@ exports.handler = async (event, context) => {
     } catch (err) {
         console.error('Erro ao excluir no Neon DB:', err);
         return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
+    } finally {
+        if (client) {
+            await client.end().catch(() => {});
+        }
     }
 };

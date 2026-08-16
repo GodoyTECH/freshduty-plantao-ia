@@ -1,6 +1,7 @@
 /**
  * Netlify Serverless Function — POST /api/save-ticket
  * Projeto: Godoy FreshOps AI — Salva ou atualiza chamado no Neon PostgreSQL
+ * Com gerenciamento de conexão robusto (finally block) e suporte Fuso BR
  */
 
 const { Client } = require('pg');
@@ -31,6 +32,8 @@ exports.handler = async (event, context) => {
         };
     }
 
+    let client = null;
+
     try {
         const payload = JSON.parse(event.body || '{}');
 
@@ -47,13 +50,14 @@ exports.handler = async (event, context) => {
         }
 
         const cleanDbUrl = rawDbUrl.split('?')[0];
-        const client = new Client({
+        client = new Client({
             connectionString: cleanDbUrl,
             ssl: { rejectUnauthorized: false }
         });
 
         await client.connect();
 
+        // 1. Assegura tabela
         await client.query(`
             CREATE TABLE IF NOT EXISTS chamados_historico (
                 id SERIAL PRIMARY KEY,
@@ -68,8 +72,9 @@ exports.handler = async (event, context) => {
             );
         `);
 
+        // 2. Busca chamado existente
         const existing = await client.query(
-            `SELECT id FROM chamados_historico WHERE numero_chamado = $1 AND data_chamado = CURRENT_DATE`,
+            `SELECT id FROM chamados_historico WHERE numero_chamado = $1 ORDER BY id DESC LIMIT 1`,
             [numero]
         );
 
@@ -77,16 +82,14 @@ exports.handler = async (event, context) => {
             await client.query(`
                 UPDATE chamados_historico
                 SET problema_constatado = $1, solucao_efetuada = $2, validado_por = $3, status_atendimento = $4, analista_nome = $5
-                WHERE numero_chamado = $6 AND data_chamado = CURRENT_DATE;
-            `, [problema, solucao, validacao, statusAtendimento, analista, numero]);
+                WHERE id = $6;
+            `, [problema, solucao, validacao, statusAtendimento, analista, existing.rows[0].id]);
         } else {
             await client.query(`
                 INSERT INTO chamados_historico (numero_chamado, problema_constatado, solucao_efetuada, validado_por, status_atendimento, analista_nome)
                 VALUES ($1, $2, $3, $4, $5, $6);
             `, [numero, problema, solucao, validacao, statusAtendimento, analista]);
         }
-
-        await client.end();
 
         return {
             statusCode: 200,
@@ -100,5 +103,9 @@ exports.handler = async (event, context) => {
     } catch (err) {
         console.error('Erro save-ticket Neon DB:', err);
         return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
+    } finally {
+        if (client) {
+            await client.end().catch(() => {});
+        }
     }
 };
