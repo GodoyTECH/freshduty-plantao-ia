@@ -4,7 +4,8 @@
   "description": "Godoy FreshOps AI — PWA & Netlify Serverless Webhooks com Neon DB",
   "main": "js/app.js",
   "scripts": {
-    "build": "echo 'No build step required'"
+    "build": "echo 'No build step required'",
+    "test": "node --test test"
   },
   "dependencies": {
     "pg": "^8.11.3"

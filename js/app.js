@@ -92,35 +92,35 @@ document.addEventListener('DOMContentLoaded', () => {
             setores.push({
                 id: idCount++, nome: `${i}º Andar`, existe: true,
                 hasMaquina: true, maquinaStatus: 'OK', maquinaAla: '', maquinaSetor: '', maquinaObs: '',
-                maquinaValidado: '', hasPosto: true, postoStatus: 'OK', postoAla: '', postoSetor: '', postoObs: '',
-                postoValidado: '', hasPainel: false, painelStatus: 'OK', painelAla: '', painelSetor: '', painelObs: '', painelValidado: ''
+                hasPosto: true, postoStatus: 'OK', postoAla: '', postoSetor: '', postoObs: '',
+                hasPainel: false, painelStatus: 'OK', painelAla: '', painelSetor: '', painelObs: '', validado: ''
             });
         }
         // P1 e P2 — Máquina + Posto
         setores.push({
             id: idCount++, nome: 'P1', existe: true,
             hasMaquina: true, maquinaStatus: 'OK', maquinaAla: '', maquinaSetor: '', maquinaObs: '',
-            maquinaValidado: '', hasPosto: true, postoStatus: 'OK', postoAla: '', postoSetor: '', postoObs: '',
-            postoValidado: '', hasPainel: false, painelStatus: 'OK', painelAla: '', painelSetor: '', painelObs: '', painelValidado: ''
+            hasPosto: true, postoStatus: 'OK', postoAla: '', postoSetor: '', postoObs: '',
+            hasPainel: false, painelStatus: 'OK', painelAla: '', painelSetor: '', painelObs: '', validado: ''
         });
         setores.push({
             id: idCount++, nome: 'P2', existe: true,
             hasMaquina: true, maquinaStatus: 'OK', maquinaAla: '', maquinaSetor: '', maquinaObs: '',
-            maquinaValidado: '', hasPosto: true, postoStatus: 'OK', postoAla: '', postoSetor: '', postoObs: '',
-            postoValidado: '', hasPainel: false, painelStatus: 'OK', painelAla: '', painelSetor: '', painelObs: '', painelValidado: ''
+            hasPosto: true, postoStatus: 'OK', postoAla: '', postoSetor: '', postoObs: '',
+            hasPainel: false, painelStatus: 'OK', painelAla: '', painelSetor: '', painelObs: '', validado: ''
         });
         // P3 e P4 — Apenas Máquina
         setores.push({
             id: idCount++, nome: 'P3', existe: true,
             hasMaquina: true, maquinaStatus: 'OK', maquinaAla: '', maquinaSetor: '', maquinaObs: '',
-            maquinaValidado: '', hasPosto: false, postoStatus: 'OK', postoAla: '', postoSetor: '', postoObs: '',
-            postoValidado: '', hasPainel: false, painelStatus: 'OK', painelAla: '', painelSetor: '', painelObs: '', painelValidado: ''
+            hasPosto: false, postoStatus: 'OK', postoAla: '', postoSetor: '', postoObs: '',
+            hasPainel: false, painelStatus: 'OK', painelAla: '', painelSetor: '', painelObs: '', validado: ''
         });
         setores.push({
             id: idCount++, nome: 'P4', existe: true,
             hasMaquina: true, maquinaStatus: 'OK', maquinaAla: '', maquinaSetor: '', maquinaObs: '',
-            maquinaValidado: '', hasPosto: false, postoStatus: 'OK', postoAla: '', postoSetor: '', postoObs: '',
-            postoValidado: '', hasPainel: false, painelStatus: 'OK', painelAla: '', painelSetor: '', painelObs: '', painelValidado: ''
+            hasPosto: false, postoStatus: 'OK', postoAla: '', postoSetor: '', postoObs: '',
+            hasPainel: false, painelStatus: 'OK', painelAla: '', painelSetor: '', painelObs: '', validado: ''
         });
         return setores;
     })();
@@ -182,12 +182,9 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const parsed = JSON.parse(raw);
                 if (Array.isArray(parsed)) {
-                    const normalized = DEFAULT_RONDA_GERAL.map((item) => ({
-                        ...item,
-                        // O nome é a identidade estável: versões antigas não tinham
-                        // o 7º andar e, por isso, seus IDs seguintes eram deslocados.
-                        ...(parsed.find(saved => saved.nome === item.nome) || {})
-                    }));
+                    // O nome é a identidade estável: versões antigas não tinham o
+                    // 7º andar e, por isso, seus IDs seguintes eram deslocados.
+                    const normalized = RondaDomain.normalizeGeneralRounds(DEFAULT_RONDA_GERAL, parsed);
                     localStorage.setItem('godoy_ronda_geral', JSON.stringify(normalized));
                     return normalized;
                 }
@@ -488,7 +485,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="ronda-card" style="border-left: 3px solid #EF4444;">
                 <div class="ronda-title" style="display: flex; align-items: center; gap: 8px;">
                     <i class="ri-fire-fill" style="color: #EF4444;"></i>
-                    <input type="text" class="ronda-nome-input" value="${setor.nome}" placeholder="Nome do Setor..." onchange="updateCriticaField(${setor.id}, 'nome', this.value)" aria-label="Nome do setor crítico">
+                    <input type="text" class="ronda-nome-input" value="${setor.nome}" placeholder="Nome do Setor..." oninput="updateCriticaField(${setor.id}, 'nome', this.value)" aria-label="Nome do setor crítico">
                 </div>
                 <div class="ronda-inputs">
                     <label class="ronda-field-label" for="critica-status-${setor.id}">Avaliação</label>
@@ -498,10 +495,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     </select>
                     ${setor.status === 'PENDENTE' ? `
                         <label class="ronda-field-label" for="critica-obs-${setor.id}">Descreva a pendência</label>
-                        <input id="critica-obs-${setor.id}" type="text" class="ronda-input ronda-obs-pendente" placeholder="⚠️ Descreva a pendência..." value="${setor.obs}" onchange="updateCriticaField(${setor.id}, 'obs', this.value)" required>
+                        <input id="critica-obs-${setor.id}" type="text" class="ronda-input ronda-obs-pendente" placeholder="⚠️ Descreva a pendência..." value="${setor.obs}" oninput="updateCriticaField(${setor.id}, 'obs', this.value)" required>
                     ` : ''}
                     <label class="ronda-field-label" for="critica-validado-${setor.id}">Quem avaliou/validou a ronda</label>
-                    <input id="critica-validado-${setor.id}" type="text" class="ronda-input" placeholder="Quem avaliou/validou a ronda..." value="${setor.validado}" onchange="updateCriticaField(${setor.id}, 'validado', this.value)">
+                    <input id="critica-validado-${setor.id}" type="text" class="ronda-input" placeholder="Quem avaliou/validou a ronda..." value="${setor.validado}" oninput="updateCriticaField(${setor.id}, 'validado', this.value)">
                 </div>
             </div>
         `).join('');
@@ -536,7 +533,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             ${setor.maquinaStatus === 'PENDENTE' ? `
                                 ${pendingFields(setor, 'maquina')}
                             ` : ''}
-                            ${validatorField(setor, 'maquina')}
                         </div>
                     ` : ''}
 
@@ -551,7 +547,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             ${setor.postoStatus === 'PENDENTE' ? `
                                 ${pendingFields(setor, 'posto')}
                             ` : ''}
-                            ${validatorField(setor, 'posto')}
                         </div>
                     ` : ''}
 
@@ -568,8 +563,14 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <option value="PENDENTE" ${setor.painelStatus === 'PENDENTE' ? 'selected' : ''}>🟡 Com Pendência</option>
                             </select>
                             ${setor.painelStatus === 'PENDENTE' ? pendingFields(setor, 'painel') : ''}
-                            ${validatorField(setor, 'painel')}
                         ` : '<span class="ronda-na">Não aplicável</span>'}
+                    </div>
+                    <div class="ronda-floor-validator">
+                        <label class="ronda-field-label" for="andar-validado-${setor.id}">Quem avaliou/validou a ronda deste andar</label>
+                        <input id="andar-validado-${setor.id}" type="text" class="ronda-input" placeholder="Validador único do andar..." value="${setor.validado || ''}" oninput="updateGeralField(${setor.id}, 'validado', this.value)">
+                        ${setor.validatorMigrationConflict ? `
+                            <p class="ronda-validator-warning"><i class="ri-alert-line"></i> Os validadores históricos dos equipamentos são diferentes. Defina quem validou este andar; os valores antigos foram preservados.</p>
+                        ` : ''}
                     </div>
                 </div>
                 ` : `
@@ -585,17 +586,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const label = prefix === 'painel' ? 'Painéis e Totens' : prefix === 'maquina' ? 'Máquina de Contingência' : 'Posto de Enfermagem';
         return `
             <label class="ronda-field-label" for="${prefix}-setor-${setor.id}">Setor</label>
-            <input id="${prefix}-setor-${setor.id}" type="text" class="ronda-input" placeholder="Setor" value="${setor[`${prefix}Setor`] || ''}" onchange="updateGeralField(${setor.id}, '${prefix}Setor', this.value)" required>
+            <input id="${prefix}-setor-${setor.id}" type="text" class="ronda-input" placeholder="Setor" value="${setor[`${prefix}Setor`] || ''}" oninput="updateGeralField(${setor.id}, '${prefix}Setor', this.value)" required>
             <label class="ronda-field-label" for="${prefix}-ala-${setor.id}">Ala</label>
-            <input id="${prefix}-ala-${setor.id}" type="text" class="ronda-input" placeholder="Ala" value="${setor[`${prefix}Ala`] || ''}" onchange="updateGeralField(${setor.id}, '${prefix}Ala', this.value)" required>
+            <input id="${prefix}-ala-${setor.id}" type="text" class="ronda-input" placeholder="Ala" value="${setor[`${prefix}Ala`] || ''}" oninput="updateGeralField(${setor.id}, '${prefix}Ala', this.value)" required>
             <label class="ronda-field-label" for="${prefix}-obs-${setor.id}">Descreva a pendência de ${label}</label>
-            <input id="${prefix}-obs-${setor.id}" type="text" class="ronda-input" placeholder="⚠️ Descreva a pendência..." value="${setor[`${prefix}Obs`] || ''}" onchange="updateGeralField(${setor.id}, '${prefix}Obs', this.value)" required>`;
-    }
-
-    function validatorField(setor, prefix) {
-        return `
-            <label class="ronda-field-label" for="${prefix}-validado-${setor.id}">Quem avaliou/validou a ronda</label>
-            <input id="${prefix}-validado-${setor.id}" type="text" class="ronda-input" placeholder="Quem avaliou/validou a ronda..." value="${setor[`${prefix}Validado`] || ''}" onchange="updateGeralField(${setor.id}, '${prefix}Validado', this.value)">`;
+            <input id="${prefix}-obs-${setor.id}" type="text" class="ronda-input" placeholder="⚠️ Descreva a pendência..." value="${setor[`${prefix}Obs`] || ''}" oninput="updateGeralField(${setor.id}, '${prefix}Obs', this.value)" required>`;
     }
 
     function renderRondaGrid() {
@@ -607,16 +602,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const item = rondaCritica.find(setor => setor.id === id);
         if (!item) return;
         item[field] = val;
+        if (field === 'status' && val === 'OK') item.obs = '';
         saveRondaCritica(rondaCritica);
-        renderRondaCritica();
+        if (field === 'status') renderRondaCritica();
     };
 
     window.updateGeralField = (id, field, val) => {
         const item = rondaGeral.find(setor => setor.id === id);
         if (!item) return;
         item[field] = val;
+        if (field === 'validado' && String(val).trim()) item.validatorMigrationConflict = false;
+        if (/Status$/.test(field) && val === 'OK') {
+            const prefix = field.replace('Status', '');
+            item[`${prefix}Setor`] = '';
+            item[`${prefix}Ala`] = '';
+            item[`${prefix}Obs`] = '';
+        }
         saveRondaGeral(rondaGeral);
-        renderRondaGeral();
+        if (field === 'existe' || field.startsWith('has') || field.endsWith('Status')) renderRondaGeral();
     };
 
     // COPIAR RONDA DIÁRIA FORMATADA PARA WHATSAPP
@@ -633,43 +636,7 @@ document.addEventListener('DOMContentLoaded', () => {
             msg += `📅 *Data:* ${dataHoje} | *Turno:* ${turno}\n`;
             msg += `----------------------------------\n\n`;
 
-            msg += `🔥 *SETORES CRÍTICOS*\n`;
-            rondaCritica.forEach(r => {
-                if (r.status === 'OK') {
-                    msg += `🟢 *${r.nome}*\n`;
-                    msg += `   • Status: 100% OK\n`;
-                    if (r.validado) msg += `   • Validado com: ${r.validado}\n`;
-                } else {
-                    msg += `🟡 *${r.nome}*\n`;
-                    msg += `   • Status: Com Pendência\n`;
-                    msg += `   • Pendência: ${r.obs || 'Em atendimento'}\n`;
-                    if (r.validado) msg += `   • Validado com: ${r.validado}\n`;
-                }
-                msg += `\n`;
-            });
-
-            msg += `🏢 *SETORES GERAIS*\n`;
-            rondaGeral.forEach(r => {
-                if (!r.existe) return;
-                msg += `*${r.nome}*\n`;
-                if (r.hasMaquina) {
-                    if (r.maquinaStatus === 'OK') {
-                        msg += `   • 🟢 Máquina de Contingência: OK\n`;
-                    } else {
-                        const loc = [r.maquinaSetor ? `Setor: ${r.maquinaSetor}` : '', r.maquinaAla ? `Ala: ${r.maquinaAla}` : ''].filter(Boolean).join(' | ');
-                        msg += `   • 🟡 Máquina de Contingência: ${r.maquinaObs || 'Pendente'}${loc ? ` (${loc})` : ''}\n`;
-                    }
-                }
-                if (r.hasPosto) {
-                    if (r.postoStatus === 'OK') {
-                        msg += `   • 🟢 Posto de Enfermagem: OK\n`;
-                    } else {
-                        const loc = [r.postoSetor ? `Setor: ${r.postoSetor}` : '', r.postoAla ? `Ala: ${r.postoAla}` : ''].filter(Boolean).join(' | ');
-                        msg += `   • 🟡 Posto de Enfermagem: ${r.postoObs || 'Pendente'}${loc ? ` (${loc})` : ''}\n`;
-                    }
-                }
-                msg += `\n`;
-            });
+            msg += `${RondaDomain.buildRoundSections(rondaCritica, rondaGeral)}\n\n`;
 
             msg += `----------------------------------\n`;
             msg += `✅ *Ronda Diária Concluída!*`;
@@ -1228,6 +1195,26 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         });
 
+        rondaGeral.filter(r => r.existe).forEach(r => {
+            const equipments = RondaDomain.EQUIPMENTS.filter(equipment => r[equipment.enabled]);
+            const statuses = equipments.map(equipment =>
+                `${equipment.label}: ${r[`${equipment.prefix}Status`] === 'OK' ? '🟢 OK' : '🟡 Pendente'}`
+            ).join('<br>');
+            const pending = equipments.filter(equipment => r[`${equipment.prefix}Status`] === 'PENDENTE').map(equipment => {
+                const prefix = equipment.prefix;
+                const location = [r[`${prefix}Setor`] && `Setor: ${r[`${prefix}Setor`]}`, r[`${prefix}Ala`] && `Ala: ${r[`${prefix}Ala`]}`].filter(Boolean).join(' | ');
+                return `${equipment.label}: ${r[`${prefix}Obs`] || 'Pendente'}${location ? ` (${location})` : ''}`;
+            }).join('<br>');
+            htmlTable += `
+                <tr>
+                    <td style="font-weight: bold;">${r.nome}</td>
+                    <td>${statuses}</td>
+                    <td>${pending || 'Sem anormalidades'}</td>
+                    <td style="text-align: center;">${r.validado || (r.validatorMigrationConflict ? 'Definição necessária' : '')}</td>
+                </tr>
+            `;
+        });
+
         htmlTable += `
                 </table>
             </body>
@@ -1257,10 +1244,8 @@ document.addEventListener('DOMContentLoaded', () => {
         report += `📅 Data: ${dataHoje} | Turno: Diurno (07h às 19h)\n`;
         report += `===================================================\n\n`;
 
-        report += `WALK / PRIMEIRA RONDA (4 SETORES: ATRIUM, MDT, PSA, PSI):\n`;
-        rondaCritica.forEach(r => {
-            report += `  • ${r.nome}: [${r.status}] ${r.status === 'PENDENTE' ? '- ' + r.obs : ''} (${r.validado})\n`;
-        });
+        report += `WALK / PRIMEIRA RONDA:\n`;
+        report += `${RondaDomain.buildRoundSections(rondaCritica, rondaGeral)}\n`;
         report += `\n---------------------------------------------------\n\n`;
 
         report += `✅ CHAMADOS ATENDIDOS E FINALIZADOS:\n\n`;
