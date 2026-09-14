@@ -75,13 +75,43 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Setores Oficiais da Ronda Diária Hospitalar (ATRIUM, MDT, PSA, PSI)
-    const DEFAULT_RONDA_SETORES = [
-        { id: 1, nome: 'ATRIUM', status: 'OK', obs: '', validado: 'Equipe ATRIUM' },
-        { id: 2, nome: 'MDT', status: 'OK', obs: '', validado: 'Equipe MDT' },
-        { id: 3, nome: 'PSA', status: 'OK', obs: '', validado: 'Equipe PSA' },
-        { id: 4, nome: 'PSI', status: 'OK', obs: '', validado: 'Equipe PSI' }
-    ];
+    // Setores Oficiais da Ronda Diária Hospitalar
+    const DEFAULT_RONDA_SETORES = (() => {
+        const setores = [];
+        let idCount = 1;
+        // 1º ao 12º Andar (exceto 7º)
+        for(let i = 1; i <= 12; i++) {
+            if(i === 7) continue;
+            setores.push({
+                id: idCount++, nome: `${i}º Andar`, existe: true,
+                hasMaquina: true, maquinaStatus: 'OK', maquinaObs: '',
+                hasPosto: true, postoStatus: 'OK', postoObs: ''
+            });
+        }
+        // Subsolos 1 e 2
+        setores.push({
+            id: idCount++, nome: `Subsolo 1 (SS1)`, existe: true,
+            hasMaquina: true, maquinaStatus: 'OK', maquinaObs: '',
+            hasPosto: true, postoStatus: 'OK', postoObs: ''
+        });
+        setores.push({
+            id: idCount++, nome: `Subsolo 2 (SS2)`, existe: true,
+            hasMaquina: true, maquinaStatus: 'OK', maquinaObs: '',
+            hasPosto: true, postoStatus: 'OK', postoObs: ''
+        });
+        // Subsolos 3 e 4
+        setores.push({
+            id: idCount++, nome: `Subsolo 3 (SS3)`, existe: true,
+            hasMaquina: true, maquinaStatus: 'OK', maquinaObs: '',
+            hasPosto: false, postoStatus: 'OK', postoObs: ''
+        });
+        setores.push({
+            id: idCount++, nome: `Subsolo 4 (SS4)`, existe: true,
+            hasMaquina: true, maquinaStatus: 'OK', maquinaObs: '',
+            hasPosto: false, postoStatus: 'OK', postoObs: ''
+        });
+        return setores;
+    })();
 
     // Seed demonstrativo de chamados do dia
     const SEED_TICKETS = [
@@ -122,7 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (raw) {
             try {
                 const parsed = JSON.parse(raw);
-                if (Array.isArray(parsed) && parsed.length === 4) return parsed;
+                if (Array.isArray(parsed) && parsed.length > 4) return parsed; // Updated for new 15 items
             } catch (e) {}
         }
         localStorage.setItem(RONDA_KEY, JSON.stringify(DEFAULT_RONDA_SETORES));
@@ -267,6 +297,50 @@ document.addEventListener('DOMContentLoaded', () => {
         applyTheme();
     });
 
+    // LOGIN SYSTEM LOGIC
+    const LOGIN_KEY = 'godoy_freshops_login';
+    const loginModalBackdrop = document.getElementById('loginModalBackdrop');
+    const loginForm = document.getElementById('loginForm');
+    const loginFirstName = document.getElementById('loginFirstName');
+    const loginLastName = document.getElementById('loginLastName');
+    const loginPin = document.getElementById('loginPin');
+
+    function checkLogin() {
+        const loginData = localStorage.getItem(LOGIN_KEY);
+        if (!loginData) {
+            loginModalBackdrop.classList.add('active');
+        } else {
+            loginModalBackdrop.classList.remove('active');
+            const data = JSON.parse(loginData);
+            const config = getApiConfig();
+            config.analystName = `${data.firstName} ${data.lastName}`;
+            localStorage.setItem(API_CONFIG_KEY, JSON.stringify(config));
+            updateAnalystUI();
+        }
+    }
+
+    if (loginForm) {
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const fName = loginFirstName.value.trim();
+            const lName = loginLastName.value.trim();
+            const pin = loginPin.value.trim();
+            
+            if(fName && lName && pin.length === 4) {
+                const loginData = { firstName: fName, lastName: lName, pin: pin };
+                localStorage.setItem(LOGIN_KEY, JSON.stringify(loginData));
+                
+                const config = getApiConfig();
+                config.analystName = `${fName} ${lName}`;
+                localStorage.setItem(API_CONFIG_KEY, JSON.stringify(config));
+                
+                loginModalBackdrop.classList.remove('active');
+                updateAnalystUI();
+                syncDatabaseTickets(filterDateInput ? filterDateInput.value : null);
+            }
+        });
+    }
+
     // API & Analyst Config Management
     function getApiConfig() {
         const raw = localStorage.getItem(API_CONFIG_KEY);
@@ -309,36 +383,91 @@ document.addEventListener('DOMContentLoaded', () => {
         alert('✨ Configurações salvas com sucesso!');
     });
 
-    // Render Ronda Diária (ATRIUM, MDT, PSA, PSI)
+    // TABS NAVIGATION LOGIC
+    const btnTabRonda = document.getElementById('btnTabRonda');
+    const btnTabPlantao = document.getElementById('btnTabPlantao');
+    const tabRondaContent = document.getElementById('tabRondaContent');
+    const tabPlantaoContent = document.getElementById('tabPlantaoContent');
+
+    if (btnTabRonda && btnTabPlantao) {
+        btnTabRonda.addEventListener('click', () => {
+            tabRondaContent.style.display = 'block';
+            tabPlantaoContent.style.display = 'none';
+            btnTabRonda.classList.add('btn-teal');
+            btnTabRonda.classList.remove('btn-secondary');
+            btnTabPlantao.classList.add('btn-secondary');
+            btnTabPlantao.classList.remove('btn-teal');
+        });
+
+        btnTabPlantao.addEventListener('click', () => {
+            tabRondaContent.style.display = 'none';
+            tabPlantaoContent.style.display = 'block';
+            btnTabPlantao.classList.add('btn-teal');
+            btnTabPlantao.classList.remove('btn-secondary');
+            btnTabRonda.classList.add('btn-secondary');
+            btnTabRonda.classList.remove('btn-teal');
+        });
+    }
+
+    // Render Ronda Diária
     function renderRondaGrid() {
         if (!rondaGrid) return;
         rondaGrid.innerHTML = ronda.map((setor, idx) => `
-            <div class="ronda-card">
-                <div class="ronda-title">
-                    <i class="ri-building-line text-teal"></i>
-                    <input type="text" class="ronda-nome-input" value="${setor.nome}" placeholder="Nome do Setor..." onchange="updateRondaField(${idx}, 'nome', this.value)" title="Clique para editar o nome deste setor">
+            <div class="ronda-card" style="${setor.existe ? '' : 'opacity: 0.5; filter: grayscale(1);'}">
+                <div class="ronda-title" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <i class="ri-building-line text-teal"></i>
+                        <strong style="font-size: 1.1rem; color: var(--text-primary);">${setor.nome}</strong>
+                    </div>
+                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer; color: var(--text-secondary);">
+                        <input type="checkbox" ${setor.existe ? 'checked' : ''} onchange="updateRondaField(${idx}, 'existe', this.checked)">
+                        Houver neste prédio?
+                    </label>
                 </div>
-                <div class="ronda-inputs">
-                    <select class="ronda-select" onchange="updateRondaField(${idx}, 'status', this.value)">
-                        <option value="OK" ${setor.status === 'OK' ? 'selected' : ''}>🟢 Status: 100% OK / Sem Anormalidades</option>
-                        <option value="PENDENTE" ${setor.status === 'PENDENTE' ? 'selected' : ''}>🟡 Status: Com Pendência Técnica</option>
-                    </select>
-                    
-                    ${setor.status === 'PENDENTE' ? `
-                        <input type="text" class="ronda-input ronda-obs-pendente" placeholder="⚠️ Descreva a pendência técnica..." value="${setor.obs}" onchange="updateRondaField(${idx}, 'obs', this.value)" required>
+                
+                ${setor.existe ? `
+                <div class="ronda-inputs" style="margin-top: 10px;">
+                    ${setor.hasMaquina ? `
+                        <div style="margin-bottom: 10px; padding: 10px; background: rgba(0,0,0,0.1); border-radius: 8px;">
+                            <strong style="display: block; margin-bottom: 6px; font-size: 0.9rem;"><i class="ri-computer-line text-amber"></i> Máquina de Contingência</strong>
+                            <select class="ronda-select" onchange="updateRondaField(${idx}, 'maquinaStatus', this.value)" style="margin-bottom: 6px;">
+                                <option value="OK" ${setor.maquinaStatus === 'OK' ? 'selected' : ''}>🟢 Status: 100% OK</option>
+                                <option value="PENDENTE" ${setor.maquinaStatus === 'PENDENTE' ? 'selected' : ''}>🟡 Status: Com Pendência</option>
+                            </select>
+                            ${setor.maquinaStatus === 'PENDENTE' ? `
+                                <input type="text" class="ronda-input" placeholder="⚠️ Descreva a pendência..." value="${setor.maquinaObs}" onchange="updateRondaField(${idx}, 'maquinaObs', this.value)">
+                            ` : ''}
+                        </div>
                     ` : ''}
 
-                    <input type="text" class="ronda-input" placeholder="Quem validou a ronda..." value="${setor.validado}" onchange="updateRondaField(${idx}, 'validado', this.value)">
+                    ${setor.hasPosto ? `
+                        <div style="padding: 10px; background: rgba(0,0,0,0.1); border-radius: 8px;">
+                            <strong style="display: block; margin-bottom: 6px; font-size: 0.9rem;"><i class="ri-nurse-line text-green"></i> Posto de Enfermagem</strong>
+                            <select class="ronda-select" onchange="updateRondaField(${idx}, 'postoStatus', this.value)" style="margin-bottom: 6px;">
+                                <option value="OK" ${setor.postoStatus === 'OK' ? 'selected' : ''}>🟢 Status: 100% OK</option>
+                                <option value="PENDENTE" ${setor.postoStatus === 'PENDENTE' ? 'selected' : ''}>🟡 Status: Com Pendência</option>
+                            </select>
+                            ${setor.postoStatus === 'PENDENTE' ? `
+                                <input type="text" class="ronda-input" placeholder="⚠️ Descreva a pendência..." value="${setor.postoObs}" onchange="updateRondaField(${idx}, 'postoObs', this.value)">
+                            ` : ''}
+                        </div>
+                    ` : ''}
                 </div>
+                ` : `
+                <div style="margin-top: 10px; font-size: 0.85rem; color: var(--text-muted); text-align: center;">
+                    <i class="ri-eye-off-line"></i> Setor ocultado do relatório.
+                </div>
+                `}
             </div>
         `).join('');
     }
 
     window.updateRondaField = (idx, field, val) => {
         ronda[idx][field] = val;
-        if (field === 'status' && val === 'OK') {
-            ronda[idx].obs = '';
-        }
+        // Auto limpa observação se voltou pra OK
+        if (field === 'maquinaStatus' && val === 'OK') ronda[idx].maquinaObs = '';
+        if (field === 'postoStatus' && val === 'OK') ronda[idx].postoObs = '';
+        
         saveRonda(ronda);
         renderRondaGrid();
     };
@@ -354,18 +483,31 @@ document.addEventListener('DOMContentLoaded', () => {
             msg += `👤 *Analista:* ${analyst}\n`;
             msg += `📅 *Data:* ${dataHoje} | *Turno:* Diurno (07h às 19h)\n`;
             msg += `----------------------------------\n\n`;
-
             ronda.forEach(r => {
-                if (r.status === 'OK') {
-                    msg += `🟢 *${r.nome}*\n`;
-                    msg += `   • *Status:* 100% OK / Sem Anormalidades\n`;
-                    msg += `   • *Validado com:* ${r.validado || 'Equipe do setor'}\n\n`;
-                } else {
-                    msg += `🟡 *${r.nome}*\n`;
-                    msg += `   • *Status:* Com Pendência Técnica\n`;
-                    msg += `   • *Pendência:* ${r.obs || 'Em atendimento'}\n`;
-                    msg += `   • *Validado com:* ${r.validado || 'Equipe do setor'}\n\n`;
+                if (!r.existe) return; // ignora se marcado como não existe (não houver)
+                
+                let maquinaTxt = '';
+                if (r.hasMaquina) {
+                    if (r.maquinaStatus === 'OK') {
+                        maquinaTxt = `   • 🟢 Máquina de Contingência: OK\n`;
+                    } else {
+                        maquinaTxt = `   • 🟡 Máquina de Contingência: ${r.maquinaObs || 'Pendente'}\n`;
+                    }
                 }
+
+                let postoTxt = '';
+                if (r.hasPosto) {
+                    if (r.postoStatus === 'OK') {
+                        postoTxt = `   • 🟢 Posto de Enfermagem: OK\n`;
+                    } else {
+                        postoTxt = `   • 🟡 Posto de Enfermagem: ${r.postoObs || 'Pendente'}\n`;
+                    }
+                }
+
+                msg += `🏢 *${r.nome}*\n`;
+                if (maquinaTxt) msg += maquinaTxt;
+                if (postoTxt) msg += postoTxt;
+                msg += `\n`;
             });
 
             msg += `----------------------------------\n`;
@@ -608,8 +750,20 @@ document.addEventListener('DOMContentLoaded', () => {
             statValidatedTickets.textContent = validated;
         }
         if (statRondaStatus) {
-            const okCount = ronda.filter(r => r.status === 'OK').length;
-            statRondaStatus.textContent = `${okCount}/4 OK`;
+            let total = 0;
+            let okCount = 0;
+            ronda.forEach(r => {
+                if (!r.existe) return;
+                if (r.hasMaquina) {
+                    total++;
+                    if (r.maquinaStatus === 'OK') okCount++;
+                }
+                if (r.hasPosto) {
+                    total++;
+                    if (r.postoStatus === 'OK') okCount++;
+                }
+            });
+            statRondaStatus.textContent = `${okCount}/${total} OK`;
         }
         updateAnalystUI();
     }
@@ -966,21 +1120,34 @@ document.addEventListener('DOMContentLoaded', () => {
     // ROTINA DE SINCRONIZAÇÃO EM TEMPO REAL COM O NEON POSTGRESQL (API GET /api/get-tickets)
     async function syncDatabaseTickets(selectedDate = null) {
         try {
-            const url = selectedDate ? `/api/get-tickets?date=${selectedDate}` : '/api/get-tickets';
+            const config = getApiConfig();
+            const analistaParam = config.analystName ? `&analista=${encodeURIComponent(config.analystName)}` : '';
+            const dateParam = selectedDate ? `date=${selectedDate}` : '';
+            
+            let queryStr = '';
+            if (dateParam && analistaParam) queryStr = `?${dateParam}${analistaParam}`;
+            else if (dateParam) queryStr = `?${dateParam}`;
+            else if (analistaParam) queryStr = `?analista=${encodeURIComponent(config.analystName)}`;
+
+            const url = `/api/get-tickets${queryStr}`;
             const resp = await fetch(url, { cache: 'no-store' });
             if (resp.ok) {
                 const data = await resp.json();
-                if (data && data.success && Array.isArray(data.tickets) && data.tickets.length > 0) {
-                    tickets = data.tickets.map(t => ({
-                        id: t.id || Date.now().toString(),
-                        numero: t.numero,
-                        problema: t.problema,
-                        solucao: t.solucao,
-                        validacao: t.validacao,
-                        status_atendimento: t.status_atendimento || 'EM_ATENDIMENTO',
-                        data: t.data || new Date().toLocaleDateString('pt-BR')
-                    }));
-
+                if (data && data.success) {
+                    if (Array.isArray(data.tickets) && data.tickets.length > 0) {
+                        tickets = data.tickets.map(t => ({
+                            id: t.id || Date.now().toString(),
+                            numero: t.numero,
+                            problema: t.problema,
+                            solucao: t.solucao,
+                            validacao: t.validacao,
+                            status_atendimento: t.status_atendimento || 'EM_ATENDIMENTO',
+                            data: t.data || new Date().toLocaleDateString('pt-BR')
+                        }));
+                    } else {
+                        // Empty array because it's a new day or no tickets for this analyst
+                        tickets = [];
+                    }
                     localStorage.setItem('freshops_tickets_v4', JSON.stringify(tickets));
                     renderTable();
                     updateStats();
@@ -992,6 +1159,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Initial Execution
+    checkLogin();
     renderRondaGrid();
     renderTable();
     updateStats();

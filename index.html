@@ -84,110 +84,148 @@
             </div>
         </div>
 
-        <!-- Section 1: Ronda Diária (4 Setores Hospitalares Editáveis) -->
-        <section class="ronda-section">
-            <div class="ronda-header">
-                <div>
-                    <h2><i class="ri-walk-line text-teal"></i> Ronda Diária (4 Setores Editáveis)</h2>
-                    <span class="ronda-badge">Pré-Requisito de Plantão</span>
+        <!-- TABS NAVIGATION -->
+        <div class="tabs-nav" style="display: flex; gap: 10px; margin-bottom: 20px;">
+            <button class="btn btn-teal" id="btnTabRonda" style="flex: 1; justify-content: center;"><i class="ri-walk-line"></i> Ronda Diária</button>
+            <button class="btn btn-secondary" id="btnTabPlantao" style="flex: 1; justify-content: center;"><i class="ri-ticket-2-line"></i> Passagem de Plantão</button>
+        </div>
+
+        <!-- TAB CONTENT: RONDA -->
+        <div id="tabRondaContent">
+            <!-- Section 1: Ronda Diária -->
+            <section class="ronda-section">
+                <div class="ronda-header">
+                    <div>
+                        <h2><i class="ri-walk-line text-teal"></i> Ronda Diária</h2>
+                        <span class="ronda-badge">Pré-Requisito de Plantão</span>
+                    </div>
+                    <div class="ronda-header-actions">
+                        <button class="btn btn-whatsapp btn-sm" id="copyRondaWhatsAppBtn">
+                            <i class="ri-whatsapp-line"></i> Copiar Ronda p/ WhatsApp
+                        </button>
+                    </div>
                 </div>
-                <div class="ronda-header-actions">
-                    <button class="btn btn-whatsapp btn-sm" id="copyRondaWhatsAppBtn">
-                        <i class="ri-whatsapp-line"></i> Copiar Ronda p/ WhatsApp
+                <div class="ronda-grid" id="rondaGrid">
+                    <!-- Setores Injetados Dinamicamente via JS -->
+                </div>
+            </section>
+        </div>
+
+        <!-- TAB CONTENT: PASSAGEM DE PLANTÃO -->
+        <div id="tabPlantaoContent" style="display: none;">
+            <!-- Section 2: Toolbar & Mobile Actions -->
+            <section class="toolbar-section">
+                <div class="stats-cards">
+                    <div class="card-stat">
+                        <div class="stat-icon"><i class="ri-ticket-2-line"></i></div>
+                        <div>
+                            <div class="stat-value" id="statTotalTickets">0</div>
+                            <div class="stat-label">Chamados Registrados Hoje</div>
+                        </div>
+                    </div>
+                    <div class="card-stat">
+                        <div class="stat-icon text-green"><i class="ri-checkbox-circle-line"></i></div>
+                        <div>
+                            <div class="stat-value" id="statValidatedTickets">0</div>
+                            <div class="stat-label">Soluções Validadas</div>
+                        </div>
+                    </div>
+                    <div class="card-stat">
+                        <div class="stat-icon text-amber"><i class="ri-shield-check-line"></i></div>
+                        <div>
+                            <div class="stat-value" id="statRondaStatus">100% Ok</div>
+                            <div class="stat-label">Status das Rondas</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="action-bar">
+                    <button class="btn btn-primary btn-lg" id="openAddTicketBtn">
+                        <i class="ri-add-line"></i> + Novo Chamado
+                    </button>
+                    <button class="btn btn-teal btn-lg" id="openOcrModalBtn">
+                        <i class="ri-screenshot-2-line"></i> Leitor de Print (Galeria/Ctrl+V)
+                    </button>
+                    <button class="btn btn-secondary" id="openPasteTeamsModalBtn">
+                        <i class="ri-microsoft-teams-line"></i> Importar Teams
+                    </button>
+                    <button class="btn btn-secondary" id="fetchApiTicketsBtn">
+                        <i class="ri-refresh-line"></i> Sincronizar API
+                    </button>
+                    <button class="btn btn-success" id="exportExcelBtn">
+                        <i class="ri-file-excel-line"></i> Planilha Excel (.xlsx)
+                    </button>
+                    <button class="btn btn-teal" id="copyEmailReportBtn">
+                        <i class="ri-clipboard-line"></i> Copiar Relatório
                     </button>
                 </div>
-            </div>
+            </section>
 
-            <div class="ronda-grid" id="rondaGrid">
-                <!-- 4 Setores Injetados Dinamicamente via JS -->
-            </div>
-        </section>
-
-        <!-- Section 2: Toolbar & Mobile Actions -->
-        <section class="toolbar-section">
-            <div class="stats-cards">
-                <div class="card-stat">
-                    <div class="stat-icon"><i class="ri-ticket-2-line"></i></div>
-                    <div>
-                        <div class="stat-value" id="statTotalTickets">0</div>
-                        <div class="stat-label">Chamados Registrados Hoje</div>
+            <!-- Section 3: Ticket Table Section -->
+            <section class="table-section">
+                <div class="section-header">
+                    <h2><i class="ri-list-check-2"></i> Chamados Atendidos</h2>
+                    <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 0.4rem; background: var(--bg-card); padding: 0.4rem 0.8rem; border-radius: 12px; border: 1px solid var(--border-color); backdrop-filter: var(--glass-blur);">
+                            <i class="ri-calendar-event-line text-teal"></i>
+                            <input type="date" id="filterDateInput" style="background: transparent; border: none; color: var(--text-primary); font-family: inherit; font-size: 0.88rem; outline: none; cursor: pointer;" title="Filtrar por Data Específica">
+                            <button type="button" id="setTodayDateBtn" class="btn btn-sm btn-teal" style="padding: 0.25rem 0.6rem; font-size: 0.78rem; min-height: 28px; border-radius: 8px;" title="Voltar para a data de hoje">⚡ Hoje</button>
+                        </div>
+                        <div class="search-box">
+                            <i class="ri-search-line"></i>
+                            <input type="text" id="searchInput" placeholder="Filtrar por nº, problema...">
+                        </div>
                     </div>
                 </div>
 
-                <div class="card-stat">
-                    <div class="stat-icon text-green"><i class="ri-checkbox-circle-line"></i></div>
-                    <div>
-                        <div class="stat-value" id="statValidatedTickets">0</div>
-                        <div class="stat-label">Soluções Validadas</div>
-                    </div>
+                <div class="table-wrapper">
+                    <table class="duty-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 140px;">1. Nº Chamado</th>
+                                <th style="width: 30%;">2. Problema Constatado</th>
+                                <th>3. Solução Efetuada</th>
+                                <th style="width: 22%;">4. Validação (Quem Validou)</th>
+                                <th style="width: 100px; text-align: right;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ticketsTableBody">
+                            <!-- Injetado dinamicamente -->
+                        </tbody>
+                    </table>
                 </div>
-
-                <div class="card-stat">
-                    <div class="stat-icon text-amber"><i class="ri-shield-check-line"></i></div>
-                    <div>
-                        <div class="stat-value" id="statRondaStatus">100% Ok</div>
-                        <div class="stat-label">Status das Rondas</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="action-bar">
-                <button class="btn btn-primary btn-lg" id="openAddTicketBtn">
-                    <i class="ri-add-line"></i> + Novo Chamado
-                </button>
-                <button class="btn btn-teal btn-lg" id="openOcrModalBtn">
-                    <i class="ri-screenshot-2-line"></i> Leitor de Print (Galeria/Ctrl+V)
-                </button>
-                <button class="btn btn-secondary" id="openPasteTeamsModalBtn">
-                    <i class="ri-microsoft-teams-line"></i> Importar Teams
-                </button>
-                <button class="btn btn-secondary" id="fetchApiTicketsBtn">
-                    <i class="ri-refresh-line"></i> Sincronizar API
-                </button>
-                <button class="btn btn-success" id="exportExcelBtn">
-                    <i class="ri-file-excel-line"></i> Planilha Excel (.xlsx)
-                </button>
-                <button class="btn btn-teal" id="copyEmailReportBtn">
-                    <i class="ri-clipboard-line"></i> Copiar Relatório
-                </button>
-            </div>
-        </section>
-
-        <!-- Section 3: Ticket Table Section -->
-        <section class="table-section">
-            <div class="section-header">
-                <h2><i class="ri-list-check-2"></i> Chamados Atendidos (4 Blocos)</h2>
-                <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
-                    <div style="display: flex; align-items: center; gap: 0.4rem; background: var(--bg-card); padding: 0.4rem 0.8rem; border-radius: 12px; border: 1px solid var(--border-color); backdrop-filter: var(--glass-blur);">
-                        <i class="ri-calendar-event-line text-teal"></i>
-                        <input type="date" id="filterDateInput" style="background: transparent; border: none; color: var(--text-primary); font-family: inherit; font-size: 0.88rem; outline: none; cursor: pointer;" title="Filtrar por Data Específica">
-                        <button type="button" id="setTodayDateBtn" class="btn btn-sm btn-teal" style="padding: 0.25rem 0.6rem; font-size: 0.78rem; min-height: 28px; border-radius: 8px;" title="Voltar para a data de hoje">⚡ Hoje</button>
-                    </div>
-                    <div class="search-box">
-                        <i class="ri-search-line"></i>
-                        <input type="text" id="searchInput" placeholder="Filtrar por nº, problema...">
-                    </div>
-                </div>
-            </div>
-
-            <div class="table-wrapper">
-                <table class="duty-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 140px;">1. Nº Chamado</th>
-                            <th style="width: 30%;">2. Problema Constatado</th>
-                            <th>3. Solução Efetuada</th>
-                            <th style="width: 22%;">4. Validação (Quem Validou)</th>
-                            <th style="width: 100px; text-align: right;">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody id="ticketsTableBody">
-                        <!-- Injetado dinamicamente -->
-                    </tbody>
-                </table>
-            </div>
-        </section>
+            </section>
+        </div>
     </main>
+
+    <!-- MODAL 0: LOGIN DO TÉCNICO (MANDATÓRIO) -->
+    <div class="modal-backdrop" id="loginModalBackdrop" style="background: rgba(0,0,0,0.9); z-index: 9999;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="ri-user-settings-line text-teal"></i> Identificação do Técnico</h3>
+            </div>
+            <div class="ocr-body">
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                    Por favor, informe seu nome e crie/digite seu PIN de 4 dígitos para acessar o sistema. O seu nome será usado para registrar a autoria dos chamados e rondas.
+                </p>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label class="form-label">Nome</label>
+                        <input type="text" id="loginFirstName" class="form-input" placeholder="Primeiro Nome" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Sobrenome</label>
+                        <input type="text" id="loginLastName" class="form-input" placeholder="Sobrenome" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">PIN (4 dígitos)</label>
+                        <input type="password" id="loginPin" class="form-input font-mono" placeholder="Ex: 1234" pattern="[0-9]{4}" maxlength="4" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;"><i class="ri-login-circle-line"></i> Acessar Sistema</button>
+                </form>
+            </div>
+        </div>
+    </div>
 
     <!-- MODAL 1: CADASTRAR / EDITAR CHAMADO -->
     <div class="modal-backdrop" id="ticketModalBackdrop">

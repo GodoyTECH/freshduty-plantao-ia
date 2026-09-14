@@ -58,45 +58,40 @@ exports.handler = async (event, context) => {
         `);
 
         const filterDate = (event.queryStringParameters && event.queryStringParameters.date) ? event.queryStringParameters.date : null;
+        const analista = (event.queryStringParameters && event.queryStringParameters.analista) ? event.queryStringParameters.analista : null;
 
         let result;
+        let queryParams = [];
+        let queryStr = `
+            SELECT 
+                id::text,
+                numero_chamado as numero,
+                problema_constatado as problema,
+                solucao_efetuada as solucao,
+                validado_por as validacao,
+                COALESCE(status_atendimento, 'EM_ATENDIMENTO') as status_atendimento,
+                TO_CHAR(data_chamado, 'DD/MM/YYYY') as data,
+                created_at
+            FROM chamados_historico
+            WHERE 1=1
+        `;
 
         if (filterDate) {
-            const query = `
-                SELECT 
-                    id::text,
-                    numero_chamado as numero,
-                    problema_constatado as problema,
-                    solucao_efetuada as solucao,
-                    validado_por as validacao,
-                    COALESCE(status_atendimento, 'EM_ATENDIMENTO') as status_atendimento,
-                    TO_CHAR(data_chamado, 'DD/MM/YYYY') as data,
-                    created_at
-                FROM chamados_historico
-                WHERE data_chamado = $1::date
-                ORDER BY id DESC;
-            `;
-            result = await client.query(query, [filterDate]);
+            queryParams.push(filterDate);
+            queryStr += ` AND data_chamado = $${queryParams.length}::date`;
+        } else {
+            // Se não informou data, busca a data de hoje para resolver o bug de cache
+            queryStr += ` AND data_chamado = CURRENT_DATE`;
         }
 
-        // Se não veio resultado na data específica ou se não forneceu data, faz o fallback buscando os chamados mais recentes
-        if (!filterDate || !result || result.rows.length === 0) {
-            const queryFallback = `
-                SELECT 
-                    id::text,
-                    numero_chamado as numero,
-                    problema_constatado as problema,
-                    solucao_efetuada as solucao,
-                    validado_por as validacao,
-                    COALESCE(status_atendimento, 'EM_ATENDIMENTO') as status_atendimento,
-                    TO_CHAR(data_chamado, 'DD/MM/YYYY') as data,
-                    created_at
-                FROM chamados_historico
-                ORDER BY id DESC
-                LIMIT 100;
-            `;
-            result = await client.query(queryFallback);
+        if (analista) {
+            queryParams.push(analista);
+            queryStr += ` AND analista_nome = $${queryParams.length}`;
         }
+
+        queryStr += ` ORDER BY id DESC;`;
+
+        result = await client.query(queryStr, queryParams);
 
         return {
             statusCode: 200,
