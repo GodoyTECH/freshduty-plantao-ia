@@ -752,62 +752,124 @@ body.theme-dark .form-input, body.theme-dark .form-textarea {
     100% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0); }
 }
 
-/* Mobile Responsive Breakpoints (Grid 2x2 on Mobile) */
+/* =========================================================
+   MOBILE-FIRST RESPONSIVE — Otimizado para celular (< 640px)
+   ========================================================= */
 @media (max-width: 640px) {
+
+    /* --- HEADER --- */
     .header-container {
-        height: 58px;
-        padding: 0 0.5rem;
-        gap: 0.4rem;
-    }
-    .logo-icon {
-        width: 34px;
-        height: 34px;
-        font-size: 1.1rem;
-        border-radius: 9px;
+        height: auto !important;
+        min-height: 56px;
+        padding: 0.5rem 0.75rem !important;
+        gap: 0.4rem !important;
+        flex-wrap: nowrap !important;
     }
     .brand-name {
-        font-size: 0.88rem;
-        gap: 0.2rem;
+        font-size: 0.85rem !important;
+    }
+    .brand-subtitle {
+        display: none !important; /* esconde subtítulo no mobile */
     }
     .badge-ai {
-        font-size: 0.58rem;
-        padding: 0.1rem 0.3rem;
+        display: none !important;
+    }
+    .logo-icon {
+        width: 34px !important;
+        height: 34px !important;
+        font-size: 1.1rem !important;
+        border-radius: 9px !important;
     }
     .live-clock-pill {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.75rem;
-        border-radius: 12px;
-    }
-
-    .analyst-bar {
-        padding: 0.65rem 0.85rem;
-        border-radius: 14px;
-        margin-bottom: 1rem;
-    }
-
-    /* Ronda Diária Grid: 2-BY-2 GRID ON MOBILE SMARTPHONES! */
-    .ronda-grid {
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 0.6rem !important;
-    }
-    .ronda-card {
-        padding: 0.65rem !important;
+        padding: 0.25rem 0.5rem !important;
+        font-size: 0.78rem !important;
         border-radius: 12px !important;
     }
-    .ronda-title {
-        font-size: 0.82rem !important;
-        margin-bottom: 0.4rem !important;
-    }
-    .ronda-nome-input {
-        font-size: 0.82rem !important;
-    }
-    .ronda-select, .ronda-input {
-        padding: 0.4rem 0.5rem !important;
-        font-size: 0.75rem !important;
-        border-radius: 8px !important;
+    /* Esconde botões de texto grandes no header mobile */
+    #installPwaBtn span,
+    #openConfigApiBtn span {
+        display: none;
     }
 
-    /* Stats Cards Grid */
+    /* --- ANALYST BAR --- */
+    .analyst-bar {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        padding: 0.7rem 1rem !important;
+        border-radius: 14px !important;
+        margin-bottom: 0.85rem !important;
+        gap: 0.5rem !important;
+    }
+    .shift-badge {
+        font-size: 0.78rem !important;
+        padding: 0.25rem 0.65rem !important;
+    }
+
+    /* --- TABS NAV --- */
+    .tabs-nav {
+        gap: 8px !important;
+        margin-bottom: 14px !important;
+    }
+    .tabs-nav .btn {
+        font-size: 0.82rem !important;
+        padding: 0.6rem 0.5rem !important;
+        min-height: 42px !important;
+        border-radius: 12px !important;
+    }
+
+    /* --- RONDA SECTION --- */
+    .ronda-section {
+        padding: 1rem 0.85rem !important;
+        border-radius: 18px !important;
+        margin-bottom: 1rem !important;
+    }
+    .ronda-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 0.5rem !important;
+        margin-bottom: 1rem !important;
+    }
+    .ronda-header h2 {
+        font-size: 1rem !important;
+    }
+    .ronda-header-actions {
+        width: 100% !important;
+    }
+    .ronda-header-actions .btn {
+        width: 100% !important;
+        justify-content: center !important;
+    }
+
+    /* --- RONDA GRID: 1 COLUNA NO MOBILE --- */
+    .ronda-grid {
+        grid-template-columns: 1fr !important;
+        gap: 0.75rem !important;
+    }
+    .ronda-card {
+        padding: 0.85rem !important;
+        border-radius: 14px !important;
+    }
+    /* O título do card crítico em linha */
+    .ronda-card .ronda-title {
+        font-size: 0.88rem !important;
+        margin-bottom: 0.5rem !important;
+        flex-wrap: nowrap !important;
+    }
+    /* Checkbox "Se houver" mais compacto */
+    .ronda-card label {
+        font-size: 0.78rem !important;
+        white-space: nowrap !important;
+    }
+    .ronda-select, .ronda-input {
+        padding: 0.5rem 0.7rem !important;
+        font-size: 0.82rem !important;
+        border-radius: 10px !important;
+    }
+    .ronda-nome-input {
+        font-size: 0.88rem !important;
+    }
+
+    /* --- STATS CARDS --- */
     .stats-cards {
         grid-template-columns: repeat(3, 1fr) !important;
         gap: 0.4rem !important;
@@ -818,23 +880,23 @@ body.theme-dark .form-input, body.theme-dark .form-textarea {
         flex-direction: column !important;
         align-items: center !important;
         text-align: center !important;
-        gap: 0.25rem !important;
+        gap: 0.2rem !important;
     }
     .stat-icon {
-        width: 32px !important;
-        height: 32px !important;
-        font-size: 1rem !important;
+        width: 30px !important;
+        height: 30px !important;
+        font-size: 0.95rem !important;
         border-radius: 8px !important;
     }
     .stat-value {
-        font-size: 1.1rem !important;
+        font-size: 1rem !important;
     }
     .stat-label {
-        font-size: 0.65rem !important;
-        line-height: 1.1 !important;
+        font-size: 0.6rem !important;
+        line-height: 1.15 !important;
     }
 
-    /* Action Bar Buttons Grid on Mobile */
+    /* --- ACTION BAR --- */
     .action-bar {
         display: grid !important;
         grid-template-columns: repeat(2, 1fr) !important;
@@ -842,17 +904,19 @@ body.theme-dark .form-input, body.theme-dark .form-textarea {
     }
     .action-bar .btn {
         width: 100% !important;
-        min-height: 42px !important;
-        padding: 0.5rem 0.5rem !important;
+        min-height: 44px !important;
+        padding: 0.5rem 0.4rem !important;
         font-size: 0.78rem !important;
         border-radius: 12px !important;
         gap: 0.3rem !important;
-    }
-    .action-bar .btn i {
-        font-size: 0.95rem !important;
+        text-align: center !important;
     }
 
-    /* Table Section & Date Filter Header */
+    /* --- TABLE SECTION --- */
+    .table-section {
+        padding: 0.85rem !important;
+        border-radius: 18px !important;
+    }
     .section-header {
         flex-direction: column !important;
         align-items: stretch !important;
@@ -860,5 +924,26 @@ body.theme-dark .form-input, body.theme-dark .form-textarea {
     }
     .search-box {
         width: 100% !important;
+        min-width: unset !important;
+    }
+    .table-wrapper {
+        overflow-x: auto !important;
+    }
+    .duty-table {
+        font-size: 0.78rem !important;
+        min-width: 560px !important;
+    }
+
+    /* --- MODAL LOGIN --- */
+    .modal-card {
+        border-radius: 20px !important;
+        padding: 1.25rem 1rem !important;
+        max-height: 95vh !important;
+    }
+
+    /* --- MAIN LAYOUT padding --- */
+    .main-layout {
+        padding-top: 1rem !important;
+        padding-bottom: 2rem !important;
     }
 }

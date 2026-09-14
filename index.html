@@ -105,8 +105,19 @@
                         </button>
                     </div>
                 </div>
-                <div class="ronda-grid" id="rondaGrid">
-                    <!-- Setores Injetados Dinamicamente via JS -->
+                
+                <h3 style="margin-top: 1.5rem; margin-bottom: 1rem; color: var(--accent-teal); display: flex; align-items: center; gap: 8px;">
+                    <i class="ri-fire-fill" style="color: #EF4444;"></i> Setores Críticos
+                </h3>
+                <div class="ronda-grid" id="rondaCriticaGrid">
+                    <!-- Setores Críticos -->
+                </div>
+
+                <h3 style="margin-top: 2rem; margin-bottom: 1rem; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+                    <i class="ri-building-4-line"></i> Setores Gerais (Máquinas e Postos)
+                </h3>
+                <div class="ronda-grid" id="rondaGeralGrid">
+                    <!-- Setores Gerais -->
                 </div>
             </section>
         </div>
@@ -220,6 +231,17 @@
                     <div class="form-group">
                         <label class="form-label">PIN (4 dígitos)</label>
                         <input type="password" id="loginPin" class="form-input font-mono" placeholder="Ex: 1234" pattern="[0-9]{4}" maxlength="4" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Turno</label>
+                        <select id="loginShift" class="form-input" required>
+                            <option value="diurno">Diurno (07h às 19h)</option>
+                            <option value="noturno">Noturno (19h às 07h)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="loginKeepConnected" checked>
+                        <label for="loginKeepConnected" style="font-size: 0.9rem; color: var(--text-secondary); cursor: pointer;">Mantenha-me conectado</label>
                     </div>
                     <button type="submit" class="btn btn-primary" style="width: 100%;"><i class="ri-login-circle-line"></i> Acessar Sistema</button>
                 </form>

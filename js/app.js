@@ -75,40 +75,47 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Setores Oficiais da Ronda Diária Hospitalar
-    const DEFAULT_RONDA_SETORES = (() => {
+    // Setores CRÍTICOS da Ronda (ATRIUM, MDT, PSA, PSI)
+    const DEFAULT_RONDA_CRITICA = [
+        { id: 1, nome: 'ATRIUM', status: 'OK', obs: '', validado: '' },
+        { id: 2, nome: 'MDT', status: 'OK', obs: '', validado: '' },
+        { id: 3, nome: 'PSA', status: 'OK', obs: '', validado: '' },
+        { id: 4, nome: 'PSI', status: 'OK', obs: '', validado: '' }
+    ];
+
+    // Setores GERAIS da Ronda (Andares + Pavimentos)
+    const DEFAULT_RONDA_GERAL = (() => {
         const setores = [];
         let idCount = 1;
-        // 1º ao 12º Andar (exceto 7º)
+        // 1º ao 12º Andar (incluindo o 7º, com toggle para desativar)
         for(let i = 1; i <= 12; i++) {
-            if(i === 7) continue;
             setores.push({
                 id: idCount++, nome: `${i}º Andar`, existe: true,
-                hasMaquina: true, maquinaStatus: 'OK', maquinaObs: '',
-                hasPosto: true, postoStatus: 'OK', postoObs: ''
+                hasMaquina: true, maquinaStatus: 'OK', maquinaAla: '', maquinaSetor: '', maquinaObs: '',
+                hasPosto: true, postoStatus: 'OK', postoAla: '', postoSetor: '', postoObs: ''
             });
         }
-        // Subsolos 1 e 2
+        // P1 e P2 — Máquina + Posto
         setores.push({
-            id: idCount++, nome: `Subsolo 1 (SS1)`, existe: true,
-            hasMaquina: true, maquinaStatus: 'OK', maquinaObs: '',
-            hasPosto: true, postoStatus: 'OK', postoObs: ''
+            id: idCount++, nome: 'P1', existe: true,
+            hasMaquina: true, maquinaStatus: 'OK', maquinaAla: '', maquinaSetor: '', maquinaObs: '',
+            hasPosto: true, postoStatus: 'OK', postoAla: '', postoSetor: '', postoObs: ''
         });
         setores.push({
-            id: idCount++, nome: `Subsolo 2 (SS2)`, existe: true,
-            hasMaquina: true, maquinaStatus: 'OK', maquinaObs: '',
-            hasPosto: true, postoStatus: 'OK', postoObs: ''
+            id: idCount++, nome: 'P2', existe: true,
+            hasMaquina: true, maquinaStatus: 'OK', maquinaAla: '', maquinaSetor: '', maquinaObs: '',
+            hasPosto: true, postoStatus: 'OK', postoAla: '', postoSetor: '', postoObs: ''
         });
-        // Subsolos 3 e 4
+        // P3 e P4 — Apenas Máquina
         setores.push({
-            id: idCount++, nome: `Subsolo 3 (SS3)`, existe: true,
-            hasMaquina: true, maquinaStatus: 'OK', maquinaObs: '',
-            hasPosto: false, postoStatus: 'OK', postoObs: ''
+            id: idCount++, nome: 'P3', existe: true,
+            hasMaquina: true, maquinaStatus: 'OK', maquinaAla: '', maquinaSetor: '', maquinaObs: '',
+            hasPosto: false, postoStatus: 'OK', postoAla: '', postoSetor: '', postoObs: ''
         });
         setores.push({
-            id: idCount++, nome: `Subsolo 4 (SS4)`, existe: true,
-            hasMaquina: true, maquinaStatus: 'OK', maquinaObs: '',
-            hasPosto: false, postoStatus: 'OK', postoObs: ''
+            id: idCount++, nome: 'P4', existe: true,
+            hasMaquina: true, maquinaStatus: 'OK', maquinaAla: '', maquinaSetor: '', maquinaObs: '',
+            hasPosto: false, postoStatus: 'OK', postoAla: '', postoSetor: '', postoObs: ''
         });
         return setores;
     })();
@@ -147,16 +154,28 @@ document.addEventListener('DOMContentLoaded', () => {
         return SEED_TICKETS;
     }
 
-    function getStoredRonda() {
-        const raw = localStorage.getItem(RONDA_KEY);
+    function getStoredRondaCritica() {
+        const raw = localStorage.getItem('godoy_ronda_critica');
         if (raw) {
             try {
                 const parsed = JSON.parse(raw);
-                if (Array.isArray(parsed) && parsed.length > 4) return parsed; // Updated for new 15 items
+                if (Array.isArray(parsed) && parsed.length === 4) return parsed;
             } catch (e) {}
         }
-        localStorage.setItem(RONDA_KEY, JSON.stringify(DEFAULT_RONDA_SETORES));
-        return DEFAULT_RONDA_SETORES;
+        localStorage.setItem('godoy_ronda_critica', JSON.stringify(DEFAULT_RONDA_CRITICA));
+        return JSON.parse(JSON.stringify(DEFAULT_RONDA_CRITICA));
+    }
+
+    function getStoredRondaGeral() {
+        const raw = localStorage.getItem('godoy_ronda_geral');
+        if (raw) {
+            try {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed) && parsed.length > 4) return parsed;
+            } catch (e) {}
+        }
+        localStorage.setItem('godoy_ronda_geral', JSON.stringify(DEFAULT_RONDA_GERAL));
+        return JSON.parse(JSON.stringify(DEFAULT_RONDA_GERAL));
     }
 
     function saveTickets(ticketsList) {
@@ -165,16 +184,23 @@ document.addEventListener('DOMContentLoaded', () => {
         updateStats();
     }
 
-    function saveRonda(rondaList) {
-        localStorage.setItem(RONDA_KEY, JSON.stringify(rondaList));
+    function saveRondaCritica(list) {
+        localStorage.setItem('godoy_ronda_critica', JSON.stringify(list));
+        updateStats();
+    }
+
+    function saveRondaGeral(list) {
+        localStorage.setItem('godoy_ronda_geral', JSON.stringify(list));
         updateStats();
     }
 
     let tickets = getStoredTickets();
-    let ronda = getStoredRonda();
+    let rondaCritica = getStoredRondaCritica();
+    let rondaGeral = getStoredRondaGeral();
 
     // DOM Elements
-    const rondaGrid = document.getElementById('rondaGrid');
+    const rondaCriticaGrid = document.getElementById('rondaCriticaGrid');
+    const rondaGeralGrid = document.getElementById('rondaGeralGrid');
     const ticketsTableBody = document.getElementById('ticketsTableBody');
     const searchInput = document.getElementById('searchInput');
     const filterDateInput = document.getElementById('filterDateInput');
@@ -304,17 +330,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginFirstName = document.getElementById('loginFirstName');
     const loginLastName = document.getElementById('loginLastName');
     const loginPin = document.getElementById('loginPin');
+    const loginShift = document.getElementById('loginShift');
+    const loginKeepConnected = document.getElementById('loginKeepConnected');
+
+    const SHIFT_LABELS = {
+        diurno: 'Plantão Diurno (07h às 19h)',
+        noturno: 'Plantão Noturno (19h às 07h)'
+    };
+
+    function getStoredLogin() {
+        // Try persistent first, then session
+        const raw = localStorage.getItem(LOGIN_KEY) || sessionStorage.getItem(LOGIN_KEY);
+        if (raw) {
+            try { return JSON.parse(raw); } catch(e) {}
+        }
+        return null;
+    }
 
     function checkLogin() {
-        const loginData = localStorage.getItem(LOGIN_KEY);
+        const loginData = getStoredLogin();
         if (!loginData) {
             loginModalBackdrop.classList.add('active');
         } else {
             loginModalBackdrop.classList.remove('active');
-            const data = JSON.parse(loginData);
             const config = getApiConfig();
-            config.analystName = `${data.firstName} ${data.lastName}`;
+            config.analystName = `${loginData.firstName} ${loginData.lastName}`;
             localStorage.setItem(API_CONFIG_KEY, JSON.stringify(config));
+            // Update shift display
+            if (displayShiftText) displayShiftText.textContent = SHIFT_LABELS[loginData.shift] || SHIFT_LABELS.diurno;
             updateAnalystUI();
         }
     }
@@ -325,16 +368,25 @@ document.addEventListener('DOMContentLoaded', () => {
             const fName = loginFirstName.value.trim();
             const lName = loginLastName.value.trim();
             const pin = loginPin.value.trim();
-            
+            const shift = loginShift ? loginShift.value : 'diurno';
+            const keepConnected = loginKeepConnected ? loginKeepConnected.checked : true;
+
             if(fName && lName && pin.length === 4) {
-                const loginData = { firstName: fName, lastName: lName, pin: pin };
-                localStorage.setItem(LOGIN_KEY, JSON.stringify(loginData));
-                
+                const loginData = { firstName: fName, lastName: lName, pin: pin, shift: shift };
+                // Persist or session only based on checkbox
+                if (keepConnected) {
+                    localStorage.setItem(LOGIN_KEY, JSON.stringify(loginData));
+                } else {
+                    sessionStorage.setItem(LOGIN_KEY, JSON.stringify(loginData));
+                    localStorage.removeItem(LOGIN_KEY);
+                }
+
                 const config = getApiConfig();
                 config.analystName = `${fName} ${lName}`;
                 localStorage.setItem(API_CONFIG_KEY, JSON.stringify(config));
-                
+
                 loginModalBackdrop.classList.remove('active');
+                if (displayShiftText) displayShiftText.textContent = SHIFT_LABELS[shift];
                 updateAnalystUI();
                 syncDatabaseTickets(filterDateInput ? filterDateInput.value : null);
             }
@@ -409,52 +461,79 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Render Ronda Diária
-    function renderRondaGrid() {
-        if (!rondaGrid) return;
-        rondaGrid.innerHTML = ronda.map((setor, idx) => `
-            <div class="ronda-card" style="${setor.existe ? '' : 'opacity: 0.5; filter: grayscale(1);'}">
+    // Render Setores CRÍTICOS (ATRIUM, MDT, PSA, PSI)
+    function renderRondaCritica() {
+        if (!rondaCriticaGrid) return;
+        rondaCriticaGrid.innerHTML = rondaCritica.map((setor, idx) => `
+            <div class="ronda-card" style="border-left: 3px solid #EF4444;">
+                <div class="ronda-title" style="display: flex; align-items: center; gap: 8px;">
+                    <i class="ri-fire-fill" style="color: #EF4444;"></i>
+                    <input type="text" class="ronda-nome-input" value="${setor.nome}" placeholder="Nome do Setor..." onchange="updateCriticaField(${idx}, 'nome', this.value)" title="Editar nome">
+                </div>
+                <div class="ronda-inputs">
+                    <select class="ronda-select" onchange="updateCriticaField(${idx}, 'status', this.value)">
+                        <option value="OK" ${setor.status === 'OK' ? 'selected' : ''}>🟢 100% OK / Sem Anormalidades</option>
+                        <option value="PENDENTE" ${setor.status === 'PENDENTE' ? 'selected' : ''}>🟡 Com Pendência Técnica</option>
+                    </select>
+                    ${setor.status === 'PENDENTE' ? `
+                        <input type="text" class="ronda-input ronda-obs-pendente" placeholder="⚠️ Descreva a pendência..." value="${setor.obs}" onchange="updateCriticaField(${idx}, 'obs', this.value)">
+                    ` : ''}
+                    <input type="text" class="ronda-input" placeholder="Quem validou a ronda..." value="${setor.validado}" onchange="updateCriticaField(${idx}, 'validado', this.value)">
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // Render Setores GERAIS (Andares + Pavimentos com Máquina e Posto)
+    function renderRondaGeral() {
+        if (!rondaGeralGrid) return;
+        rondaGeralGrid.innerHTML = rondaGeral.map((setor, idx) => `
+            <div class="ronda-card" style="${setor.existe ? '' : 'opacity: 0.45; filter: grayscale(1);'}">
                 <div class="ronda-title" style="display: flex; justify-content: space-between; align-items: center;">
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <i class="ri-building-line text-teal"></i>
-                        <strong style="font-size: 1.1rem; color: var(--text-primary);">${setor.nome}</strong>
+                        <strong style="font-size: 1.05rem; color: var(--text-primary);">${setor.nome}</strong>
                     </div>
-                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer; color: var(--text-secondary);">
-                        <input type="checkbox" ${setor.existe ? 'checked' : ''} onchange="updateRondaField(${idx}, 'existe', this.checked)">
-                        Houver neste prédio?
+                    <label style="display: flex; align-items: center; gap: 5px; font-size: 0.82rem; cursor: pointer; color: var(--text-secondary);">
+                        <input type="checkbox" ${setor.existe ? 'checked' : ''} onchange="updateGeralField(${idx}, 'existe', this.checked)">
+                        Se houver
                     </label>
                 </div>
-                
+
                 ${setor.existe ? `
                 <div class="ronda-inputs" style="margin-top: 10px;">
                     ${setor.hasMaquina ? `
-                        <div style="margin-bottom: 10px; padding: 10px; background: rgba(0,0,0,0.1); border-radius: 8px;">
-                            <strong style="display: block; margin-bottom: 6px; font-size: 0.9rem;"><i class="ri-computer-line text-amber"></i> Máquina de Contingência</strong>
-                            <select class="ronda-select" onchange="updateRondaField(${idx}, 'maquinaStatus', this.value)" style="margin-bottom: 6px;">
-                                <option value="OK" ${setor.maquinaStatus === 'OK' ? 'selected' : ''}>🟢 Status: 100% OK</option>
-                                <option value="PENDENTE" ${setor.maquinaStatus === 'PENDENTE' ? 'selected' : ''}>🟡 Status: Com Pendência</option>
+                        <div style="margin-bottom: 10px; padding: 10px; background: rgba(0,0,0,0.12); border-radius: 8px;">
+                            <strong style="display: block; margin-bottom: 6px; font-size: 0.88rem;"><i class="ri-computer-line text-amber"></i> Máquina de Contingência</strong>
+                            <select class="ronda-select" onchange="updateGeralField(${idx}, 'maquinaStatus', this.value)" style="margin-bottom: 6px;">
+                                <option value="OK" ${setor.maquinaStatus === 'OK' ? 'selected' : ''}>🟢 100% OK</option>
+                                <option value="PENDENTE" ${setor.maquinaStatus === 'PENDENTE' ? 'selected' : ''}>🟡 Com Pendência</option>
                             </select>
                             ${setor.maquinaStatus === 'PENDENTE' ? `
-                                <input type="text" class="ronda-input" placeholder="⚠️ Descreva a pendência..." value="${setor.maquinaObs}" onchange="updateRondaField(${idx}, 'maquinaObs', this.value)">
+                                <input type="text" class="ronda-input" placeholder="Setor" value="${setor.maquinaSetor}" onchange="updateGeralField(${idx}, 'maquinaSetor', this.value)" style="margin-bottom: 4px;">
+                                <input type="text" class="ronda-input" placeholder="Ala" value="${setor.maquinaAla}" onchange="updateGeralField(${idx}, 'maquinaAla', this.value)" style="margin-bottom: 4px;">
+                                <input type="text" class="ronda-input" placeholder="⚠️ Descreva a pendência..." value="${setor.maquinaObs}" onchange="updateGeralField(${idx}, 'maquinaObs', this.value)">
                             ` : ''}
                         </div>
                     ` : ''}
 
                     ${setor.hasPosto ? `
-                        <div style="padding: 10px; background: rgba(0,0,0,0.1); border-radius: 8px;">
-                            <strong style="display: block; margin-bottom: 6px; font-size: 0.9rem;"><i class="ri-nurse-line text-green"></i> Posto de Enfermagem</strong>
-                            <select class="ronda-select" onchange="updateRondaField(${idx}, 'postoStatus', this.value)" style="margin-bottom: 6px;">
-                                <option value="OK" ${setor.postoStatus === 'OK' ? 'selected' : ''}>🟢 Status: 100% OK</option>
-                                <option value="PENDENTE" ${setor.postoStatus === 'PENDENTE' ? 'selected' : ''}>🟡 Status: Com Pendência</option>
+                        <div style="padding: 10px; background: rgba(0,0,0,0.12); border-radius: 8px;">
+                            <strong style="display: block; margin-bottom: 6px; font-size: 0.88rem;"><i class="ri-nurse-line text-green"></i> Posto de Enfermagem</strong>
+                            <select class="ronda-select" onchange="updateGeralField(${idx}, 'postoStatus', this.value)" style="margin-bottom: 6px;">
+                                <option value="OK" ${setor.postoStatus === 'OK' ? 'selected' : ''}>🟢 100% OK</option>
+                                <option value="PENDENTE" ${setor.postoStatus === 'PENDENTE' ? 'selected' : ''}>🟡 Com Pendência</option>
                             </select>
                             ${setor.postoStatus === 'PENDENTE' ? `
-                                <input type="text" class="ronda-input" placeholder="⚠️ Descreva a pendência..." value="${setor.postoObs}" onchange="updateRondaField(${idx}, 'postoObs', this.value)">
+                                <input type="text" class="ronda-input" placeholder="Setor" value="${setor.postoSetor}" onchange="updateGeralField(${idx}, 'postoSetor', this.value)" style="margin-bottom: 4px;">
+                                <input type="text" class="ronda-input" placeholder="Ala" value="${setor.postoAla}" onchange="updateGeralField(${idx}, 'postoAla', this.value)" style="margin-bottom: 4px;">
+                                <input type="text" class="ronda-input" placeholder="⚠️ Descreva a pendência..." value="${setor.postoObs}" onchange="updateGeralField(${idx}, 'postoObs', this.value)">
                             ` : ''}
                         </div>
                     ` : ''}
                 </div>
                 ` : `
-                <div style="margin-top: 10px; font-size: 0.85rem; color: var(--text-muted); text-align: center;">
+                <div style="margin-top: 8px; font-size: 0.82rem; color: var(--text-muted); text-align: center;">
                     <i class="ri-eye-off-line"></i> Setor ocultado do relatório.
                 </div>
                 `}
@@ -462,51 +541,75 @@ document.addEventListener('DOMContentLoaded', () => {
         `).join('');
     }
 
-    window.updateRondaField = (idx, field, val) => {
-        ronda[idx][field] = val;
-        // Auto limpa observação se voltou pra OK
-        if (field === 'maquinaStatus' && val === 'OK') ronda[idx].maquinaObs = '';
-        if (field === 'postoStatus' && val === 'OK') ronda[idx].postoObs = '';
-        
-        saveRonda(ronda);
-        renderRondaGrid();
+    function renderRondaGrid() {
+        renderRondaCritica();
+        renderRondaGeral();
+    }
+
+    window.updateCriticaField = (idx, field, val) => {
+        rondaCritica[idx][field] = val;
+        if (field === 'status' && val === 'OK') rondaCritica[idx].obs = '';
+        saveRondaCritica(rondaCritica);
+        renderRondaCritica();
     };
 
-    // COPIAR RONDA DIÁRIA FORMATADA CONCISA PARA WHATSAPP
+    window.updateGeralField = (idx, field, val) => {
+        rondaGeral[idx][field] = val;
+        if (field === 'maquinaStatus' && val === 'OK') { rondaGeral[idx].maquinaObs = ''; rondaGeral[idx].maquinaAla = ''; rondaGeral[idx].maquinaSetor = ''; }
+        if (field === 'postoStatus' && val === 'OK') { rondaGeral[idx].postoObs = ''; rondaGeral[idx].postoAla = ''; rondaGeral[idx].postoSetor = ''; }
+        saveRondaGeral(rondaGeral);
+        renderRondaGeral();
+    };
+
+    // COPIAR RONDA DIÁRIA FORMATADA PARA WHATSAPP
     if (copyRondaWhatsAppBtn) {
         copyRondaWhatsAppBtn.addEventListener('click', () => {
             const config = getApiConfig();
-            const analyst = config.analystName || 'Caique Eduardo';
+            const analyst = config.analystName || 'Técnico';
+            const loginData = getStoredLogin();
+            const turno = loginData ? (SHIFT_LABELS[loginData.shift] || SHIFT_LABELS.diurno) : SHIFT_LABELS.diurno;
             const dataHoje = new Date().toLocaleDateString('pt-BR');
 
             let msg = `🏥 *RELATÓRIO DE RONDA DIÁRIA — SUPORTE TÉCNICO*\n`;
             msg += `👤 *Analista:* ${analyst}\n`;
-            msg += `📅 *Data:* ${dataHoje} | *Turno:* Diurno (07h às 19h)\n`;
+            msg += `📅 *Data:* ${dataHoje} | *Turno:* ${turno}\n`;
             msg += `----------------------------------\n\n`;
-            ronda.forEach(r => {
-                if (!r.existe) return; // ignora se marcado como não existe (não houver)
-                
-                let maquinaTxt = '';
+
+            msg += `🔥 *SETORES CRÍTICOS*\n`;
+            rondaCritica.forEach(r => {
+                if (r.status === 'OK') {
+                    msg += `🟢 *${r.nome}*\n`;
+                    msg += `   • Status: 100% OK\n`;
+                    if (r.validado) msg += `   • Validado com: ${r.validado}\n`;
+                } else {
+                    msg += `🟡 *${r.nome}*\n`;
+                    msg += `   • Status: Com Pendência\n`;
+                    msg += `   • Pendência: ${r.obs || 'Em atendimento'}\n`;
+                    if (r.validado) msg += `   • Validado com: ${r.validado}\n`;
+                }
+                msg += `\n`;
+            });
+
+            msg += `🏢 *SETORES GERAIS*\n`;
+            rondaGeral.forEach(r => {
+                if (!r.existe) return;
+                msg += `*${r.nome}*\n`;
                 if (r.hasMaquina) {
                     if (r.maquinaStatus === 'OK') {
-                        maquinaTxt = `   • 🟢 Máquina de Contingência: OK\n`;
+                        msg += `   • 🟢 Máquina de Contingência: OK\n`;
                     } else {
-                        maquinaTxt = `   • 🟡 Máquina de Contingência: ${r.maquinaObs || 'Pendente'}\n`;
+                        const loc = [r.maquinaSetor ? `Setor: ${r.maquinaSetor}` : '', r.maquinaAla ? `Ala: ${r.maquinaAla}` : ''].filter(Boolean).join(' | ');
+                        msg += `   • 🟡 Máquina de Contingência: ${r.maquinaObs || 'Pendente'}${loc ? ` (${loc})` : ''}\n`;
                     }
                 }
-
-                let postoTxt = '';
                 if (r.hasPosto) {
                     if (r.postoStatus === 'OK') {
-                        postoTxt = `   • 🟢 Posto de Enfermagem: OK\n`;
+                        msg += `   • 🟢 Posto de Enfermagem: OK\n`;
                     } else {
-                        postoTxt = `   • 🟡 Posto de Enfermagem: ${r.postoObs || 'Pendente'}\n`;
+                        const loc = [r.postoSetor ? `Setor: ${r.postoSetor}` : '', r.postoAla ? `Ala: ${r.postoAla}` : ''].filter(Boolean).join(' | ');
+                        msg += `   • 🟡 Posto de Enfermagem: ${r.postoObs || 'Pendente'}${loc ? ` (${loc})` : ''}\n`;
                     }
                 }
-
-                msg += `🏢 *${r.nome}*\n`;
-                if (maquinaTxt) msg += maquinaTxt;
-                if (postoTxt) msg += postoTxt;
                 msg += `\n`;
             });
 
@@ -514,7 +617,7 @@ document.addEventListener('DOMContentLoaded', () => {
             msg += `✅ *Ronda Diária Concluída!*`;
 
             navigator.clipboard.writeText(msg).then(() => {
-                alert('✨ Resumo enxuto da Ronda Diária copiado com sucesso! Pode colar no WhatsApp.');
+                alert('✨ Ronda copiada com sucesso! Pode colar no WhatsApp.');
             }).catch(err => {
                 console.error('Erro ao copiar', err);
             });
