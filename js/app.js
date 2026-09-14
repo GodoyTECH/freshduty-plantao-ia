@@ -92,30 +92,35 @@ document.addEventListener('DOMContentLoaded', () => {
             setores.push({
                 id: idCount++, nome: `${i}º Andar`, existe: true,
                 hasMaquina: true, maquinaStatus: 'OK', maquinaAla: '', maquinaSetor: '', maquinaObs: '',
-                hasPosto: true, postoStatus: 'OK', postoAla: '', postoSetor: '', postoObs: ''
+                maquinaValidado: '', hasPosto: true, postoStatus: 'OK', postoAla: '', postoSetor: '', postoObs: '',
+                postoValidado: '', hasPainel: false, painelStatus: 'OK', painelAla: '', painelSetor: '', painelObs: '', painelValidado: ''
             });
         }
         // P1 e P2 — Máquina + Posto
         setores.push({
             id: idCount++, nome: 'P1', existe: true,
             hasMaquina: true, maquinaStatus: 'OK', maquinaAla: '', maquinaSetor: '', maquinaObs: '',
-            hasPosto: true, postoStatus: 'OK', postoAla: '', postoSetor: '', postoObs: ''
+            maquinaValidado: '', hasPosto: true, postoStatus: 'OK', postoAla: '', postoSetor: '', postoObs: '',
+            postoValidado: '', hasPainel: false, painelStatus: 'OK', painelAla: '', painelSetor: '', painelObs: '', painelValidado: ''
         });
         setores.push({
             id: idCount++, nome: 'P2', existe: true,
             hasMaquina: true, maquinaStatus: 'OK', maquinaAla: '', maquinaSetor: '', maquinaObs: '',
-            hasPosto: true, postoStatus: 'OK', postoAla: '', postoSetor: '', postoObs: ''
+            maquinaValidado: '', hasPosto: true, postoStatus: 'OK', postoAla: '', postoSetor: '', postoObs: '',
+            postoValidado: '', hasPainel: false, painelStatus: 'OK', painelAla: '', painelSetor: '', painelObs: '', painelValidado: ''
         });
         // P3 e P4 — Apenas Máquina
         setores.push({
             id: idCount++, nome: 'P3', existe: true,
             hasMaquina: true, maquinaStatus: 'OK', maquinaAla: '', maquinaSetor: '', maquinaObs: '',
-            hasPosto: false, postoStatus: 'OK', postoAla: '', postoSetor: '', postoObs: ''
+            maquinaValidado: '', hasPosto: false, postoStatus: 'OK', postoAla: '', postoSetor: '', postoObs: '',
+            postoValidado: '', hasPainel: false, painelStatus: 'OK', painelAla: '', painelSetor: '', painelObs: '', painelValidado: ''
         });
         setores.push({
             id: idCount++, nome: 'P4', existe: true,
             hasMaquina: true, maquinaStatus: 'OK', maquinaAla: '', maquinaSetor: '', maquinaObs: '',
-            hasPosto: false, postoStatus: 'OK', postoAla: '', postoSetor: '', postoObs: ''
+            maquinaValidado: '', hasPosto: false, postoStatus: 'OK', postoAla: '', postoSetor: '', postoObs: '',
+            postoValidado: '', hasPainel: false, painelStatus: 'OK', painelAla: '', painelSetor: '', painelObs: '', painelValidado: ''
         });
         return setores;
     })();
@@ -159,7 +164,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (raw) {
             try {
                 const parsed = JSON.parse(raw);
-                if (Array.isArray(parsed) && parsed.length === 4) return parsed;
+                if (Array.isArray(parsed)) return DEFAULT_RONDA_CRITICA.map((item) => ({
+                    ...item,
+                    ...(parsed.find(saved => saved.nome === item.nome) || parsed.find(saved => saved.id === item.id) || {})
+                }));
             } catch (e) {}
         }
         localStorage.setItem('godoy_ronda_critica', JSON.stringify(DEFAULT_RONDA_CRITICA));
@@ -167,11 +175,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function getStoredRondaGeral() {
-        const raw = localStorage.getItem('godoy_ronda_geral');
+        // A chave antiga é aceita para que rondas anteriores à separação entre
+        // setores críticos e gerais continuem editáveis.
+        const raw = localStorage.getItem('godoy_ronda_geral') || localStorage.getItem(RONDA_KEY);
         if (raw) {
             try {
                 const parsed = JSON.parse(raw);
-                if (Array.isArray(parsed) && parsed.length > 4) return parsed;
+                if (Array.isArray(parsed)) {
+                    const normalized = DEFAULT_RONDA_GERAL.map((item) => ({
+                        ...item,
+                        // O nome é a identidade estável: versões antigas não tinham
+                        // o 7º andar e, por isso, seus IDs seguintes eram deslocados.
+                        ...(parsed.find(saved => saved.nome === item.nome) || {})
+                    }));
+                    localStorage.setItem('godoy_ronda_geral', JSON.stringify(normalized));
+                    return normalized;
+                }
             } catch (e) {}
         }
         localStorage.setItem('godoy_ronda_geral', JSON.stringify(DEFAULT_RONDA_GERAL));
@@ -208,6 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const statValidatedTickets = document.getElementById('statValidatedTickets');
     const statRondaStatus = document.getElementById('statRondaStatus');
     const displayAnalystName = document.getElementById('displayAnalystName');
+    const displayShiftText = document.getElementById('displayShiftText');
 
     const themeToggleBtn = document.getElementById('themeToggleBtn');
     const themeIcon = document.getElementById('themeIcon');
@@ -464,21 +484,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // Render Setores CRÍTICOS (ATRIUM, MDT, PSA, PSI)
     function renderRondaCritica() {
         if (!rondaCriticaGrid) return;
-        rondaCriticaGrid.innerHTML = rondaCritica.map((setor, idx) => `
+        rondaCriticaGrid.innerHTML = rondaCritica.map((setor) => `
             <div class="ronda-card" style="border-left: 3px solid #EF4444;">
                 <div class="ronda-title" style="display: flex; align-items: center; gap: 8px;">
                     <i class="ri-fire-fill" style="color: #EF4444;"></i>
-                    <input type="text" class="ronda-nome-input" value="${setor.nome}" placeholder="Nome do Setor..." onchange="updateCriticaField(${idx}, 'nome', this.value)" title="Editar nome">
+                    <input type="text" class="ronda-nome-input" value="${setor.nome}" placeholder="Nome do Setor..." onchange="updateCriticaField(${setor.id}, 'nome', this.value)" aria-label="Nome do setor crítico">
                 </div>
                 <div class="ronda-inputs">
-                    <select class="ronda-select" onchange="updateCriticaField(${idx}, 'status', this.value)">
+                    <label class="ronda-field-label" for="critica-status-${setor.id}">Avaliação</label>
+                    <select id="critica-status-${setor.id}" class="ronda-select" onchange="updateCriticaField(${setor.id}, 'status', this.value)">
                         <option value="OK" ${setor.status === 'OK' ? 'selected' : ''}>🟢 100% OK / Sem Anormalidades</option>
                         <option value="PENDENTE" ${setor.status === 'PENDENTE' ? 'selected' : ''}>🟡 Com Pendência Técnica</option>
                     </select>
                     ${setor.status === 'PENDENTE' ? `
-                        <input type="text" class="ronda-input ronda-obs-pendente" placeholder="⚠️ Descreva a pendência..." value="${setor.obs}" onchange="updateCriticaField(${idx}, 'obs', this.value)">
+                        <label class="ronda-field-label" for="critica-obs-${setor.id}">Descreva a pendência</label>
+                        <input id="critica-obs-${setor.id}" type="text" class="ronda-input ronda-obs-pendente" placeholder="⚠️ Descreva a pendência..." value="${setor.obs}" onchange="updateCriticaField(${setor.id}, 'obs', this.value)" required>
                     ` : ''}
-                    <input type="text" class="ronda-input" placeholder="Quem validou a ronda..." value="${setor.validado}" onchange="updateCriticaField(${idx}, 'validado', this.value)">
+                    <label class="ronda-field-label" for="critica-validado-${setor.id}">Quem avaliou/validou a ronda</label>
+                    <input id="critica-validado-${setor.id}" type="text" class="ronda-input" placeholder="Quem avaliou/validou a ronda..." value="${setor.validado}" onchange="updateCriticaField(${setor.id}, 'validado', this.value)">
                 </div>
             </div>
         `).join('');
@@ -487,7 +510,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Render Setores GERAIS (Andares + Pavimentos com Máquina e Posto)
     function renderRondaGeral() {
         if (!rondaGeralGrid) return;
-        rondaGeralGrid.innerHTML = rondaGeral.map((setor, idx) => `
+        rondaGeralGrid.innerHTML = rondaGeral.map((setor) => `
             <div class="ronda-card" style="${setor.existe ? '' : 'opacity: 0.45; filter: grayscale(1);'}">
                 <div class="ronda-title" style="display: flex; justify-content: space-between; align-items: center;">
                     <div style="display: flex; align-items: center; gap: 8px;">
@@ -495,7 +518,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <strong style="font-size: 1.05rem; color: var(--text-primary);">${setor.nome}</strong>
                     </div>
                     <label style="display: flex; align-items: center; gap: 5px; font-size: 0.82rem; cursor: pointer; color: var(--text-secondary);">
-                        <input type="checkbox" ${setor.existe ? 'checked' : ''} onchange="updateGeralField(${idx}, 'existe', this.checked)">
+                        <input type="checkbox" ${setor.existe ? 'checked' : ''} onchange="updateGeralField(${setor.id}, 'existe', this.checked)">
                         Se houver
                     </label>
                 </div>
@@ -505,32 +528,49 @@ document.addEventListener('DOMContentLoaded', () => {
                     ${setor.hasMaquina ? `
                         <div style="margin-bottom: 10px; padding: 10px; background: rgba(0,0,0,0.12); border-radius: 8px;">
                             <strong style="display: block; margin-bottom: 6px; font-size: 0.88rem;"><i class="ri-computer-line text-amber"></i> Máquina de Contingência</strong>
-                            <select class="ronda-select" onchange="updateGeralField(${idx}, 'maquinaStatus', this.value)" style="margin-bottom: 6px;">
+                            <label class="ronda-field-label" for="maquina-status-${setor.id}">Avaliação</label>
+                            <select id="maquina-status-${setor.id}" class="ronda-select" onchange="updateGeralField(${setor.id}, 'maquinaStatus', this.value)" style="margin-bottom: 6px;">
                                 <option value="OK" ${setor.maquinaStatus === 'OK' ? 'selected' : ''}>🟢 100% OK</option>
                                 <option value="PENDENTE" ${setor.maquinaStatus === 'PENDENTE' ? 'selected' : ''}>🟡 Com Pendência</option>
                             </select>
                             ${setor.maquinaStatus === 'PENDENTE' ? `
-                                <input type="text" class="ronda-input" placeholder="Setor" value="${setor.maquinaSetor}" onchange="updateGeralField(${idx}, 'maquinaSetor', this.value)" style="margin-bottom: 4px;">
-                                <input type="text" class="ronda-input" placeholder="Ala" value="${setor.maquinaAla}" onchange="updateGeralField(${idx}, 'maquinaAla', this.value)" style="margin-bottom: 4px;">
-                                <input type="text" class="ronda-input" placeholder="⚠️ Descreva a pendência..." value="${setor.maquinaObs}" onchange="updateGeralField(${idx}, 'maquinaObs', this.value)">
+                                ${pendingFields(setor, 'maquina')}
                             ` : ''}
+                            ${validatorField(setor, 'maquina')}
                         </div>
                     ` : ''}
 
                     ${setor.hasPosto ? `
                         <div style="padding: 10px; background: rgba(0,0,0,0.12); border-radius: 8px;">
                             <strong style="display: block; margin-bottom: 6px; font-size: 0.88rem;"><i class="ri-nurse-line text-green"></i> Posto de Enfermagem</strong>
-                            <select class="ronda-select" onchange="updateGeralField(${idx}, 'postoStatus', this.value)" style="margin-bottom: 6px;">
+                            <label class="ronda-field-label" for="posto-status-${setor.id}">Avaliação</label>
+                            <select id="posto-status-${setor.id}" class="ronda-select" onchange="updateGeralField(${setor.id}, 'postoStatus', this.value)" style="margin-bottom: 6px;">
                                 <option value="OK" ${setor.postoStatus === 'OK' ? 'selected' : ''}>🟢 100% OK</option>
                                 <option value="PENDENTE" ${setor.postoStatus === 'PENDENTE' ? 'selected' : ''}>🟡 Com Pendência</option>
                             </select>
                             ${setor.postoStatus === 'PENDENTE' ? `
-                                <input type="text" class="ronda-input" placeholder="Setor" value="${setor.postoSetor}" onchange="updateGeralField(${idx}, 'postoSetor', this.value)" style="margin-bottom: 4px;">
-                                <input type="text" class="ronda-input" placeholder="Ala" value="${setor.postoAla}" onchange="updateGeralField(${idx}, 'postoAla', this.value)" style="margin-bottom: 4px;">
-                                <input type="text" class="ronda-input" placeholder="⚠️ Descreva a pendência..." value="${setor.postoObs}" onchange="updateGeralField(${idx}, 'postoObs', this.value)">
+                                ${pendingFields(setor, 'posto')}
                             ` : ''}
+                            ${validatorField(setor, 'posto')}
                         </div>
                     ` : ''}
+
+                    <div class="ronda-subcard">
+                        <label class="ronda-optional-toggle">
+                            <input type="checkbox" ${setor.hasPainel ? 'checked' : ''} onchange="updateGeralField(${setor.id}, 'hasPainel', this.checked)">
+                            Se houver painéis e totens
+                        </label>
+                        ${setor.hasPainel ? `
+                            <strong class="ronda-equipment-title"><i class="ri-dashboard-line text-teal"></i> Painéis e Totens</strong>
+                            <label class="ronda-field-label" for="painel-status-${setor.id}">Avaliação</label>
+                            <select id="painel-status-${setor.id}" class="ronda-select" onchange="updateGeralField(${setor.id}, 'painelStatus', this.value)">
+                                <option value="OK" ${setor.painelStatus === 'OK' ? 'selected' : ''}>🟢 100% OK</option>
+                                <option value="PENDENTE" ${setor.painelStatus === 'PENDENTE' ? 'selected' : ''}>🟡 Com Pendência</option>
+                            </select>
+                            ${setor.painelStatus === 'PENDENTE' ? pendingFields(setor, 'painel') : ''}
+                            ${validatorField(setor, 'painel')}
+                        ` : '<span class="ronda-na">Não aplicável</span>'}
+                    </div>
                 </div>
                 ` : `
                 <div style="margin-top: 8px; font-size: 0.82rem; color: var(--text-muted); text-align: center;">
@@ -541,22 +581,40 @@ document.addEventListener('DOMContentLoaded', () => {
         `).join('');
     }
 
+    function pendingFields(setor, prefix) {
+        const label = prefix === 'painel' ? 'Painéis e Totens' : prefix === 'maquina' ? 'Máquina de Contingência' : 'Posto de Enfermagem';
+        return `
+            <label class="ronda-field-label" for="${prefix}-setor-${setor.id}">Setor</label>
+            <input id="${prefix}-setor-${setor.id}" type="text" class="ronda-input" placeholder="Setor" value="${setor[`${prefix}Setor`] || ''}" onchange="updateGeralField(${setor.id}, '${prefix}Setor', this.value)" required>
+            <label class="ronda-field-label" for="${prefix}-ala-${setor.id}">Ala</label>
+            <input id="${prefix}-ala-${setor.id}" type="text" class="ronda-input" placeholder="Ala" value="${setor[`${prefix}Ala`] || ''}" onchange="updateGeralField(${setor.id}, '${prefix}Ala', this.value)" required>
+            <label class="ronda-field-label" for="${prefix}-obs-${setor.id}">Descreva a pendência de ${label}</label>
+            <input id="${prefix}-obs-${setor.id}" type="text" class="ronda-input" placeholder="⚠️ Descreva a pendência..." value="${setor[`${prefix}Obs`] || ''}" onchange="updateGeralField(${setor.id}, '${prefix}Obs', this.value)" required>`;
+    }
+
+    function validatorField(setor, prefix) {
+        return `
+            <label class="ronda-field-label" for="${prefix}-validado-${setor.id}">Quem avaliou/validou a ronda</label>
+            <input id="${prefix}-validado-${setor.id}" type="text" class="ronda-input" placeholder="Quem avaliou/validou a ronda..." value="${setor[`${prefix}Validado`] || ''}" onchange="updateGeralField(${setor.id}, '${prefix}Validado', this.value)">`;
+    }
+
     function renderRondaGrid() {
         renderRondaCritica();
         renderRondaGeral();
     }
 
-    window.updateCriticaField = (idx, field, val) => {
-        rondaCritica[idx][field] = val;
-        if (field === 'status' && val === 'OK') rondaCritica[idx].obs = '';
+    window.updateCriticaField = (id, field, val) => {
+        const item = rondaCritica.find(setor => setor.id === id);
+        if (!item) return;
+        item[field] = val;
         saveRondaCritica(rondaCritica);
         renderRondaCritica();
     };
 
-    window.updateGeralField = (idx, field, val) => {
-        rondaGeral[idx][field] = val;
-        if (field === 'maquinaStatus' && val === 'OK') { rondaGeral[idx].maquinaObs = ''; rondaGeral[idx].maquinaAla = ''; rondaGeral[idx].maquinaSetor = ''; }
-        if (field === 'postoStatus' && val === 'OK') { rondaGeral[idx].postoObs = ''; rondaGeral[idx].postoAla = ''; rondaGeral[idx].postoSetor = ''; }
+    window.updateGeralField = (id, field, val) => {
+        const item = rondaGeral.find(setor => setor.id === id);
+        if (!item) return;
+        item[field] = val;
         saveRondaGeral(rondaGeral);
         renderRondaGeral();
     };
@@ -855,7 +913,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (statRondaStatus) {
             let total = 0;
             let okCount = 0;
-            ronda.forEach(r => {
+            rondaCritica.forEach(r => {
+                total++;
+                if (r.status === 'OK') okCount++;
+            });
+            rondaGeral.forEach(r => {
                 if (!r.existe) return;
                 if (r.hasMaquina) {
                     total++;
@@ -864,6 +926,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (r.hasPosto) {
                     total++;
                     if (r.postoStatus === 'OK') okCount++;
+                }
+                if (r.hasPainel) {
+                    total++;
+                    if (r.painelStatus === 'OK') okCount++;
                 }
             });
             statRondaStatus.textContent = `${okCount}/${total} OK`;
@@ -1151,7 +1217,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </tr>
         `;
 
-        ronda.forEach(r => {
+        rondaCritica.forEach(r => {
             htmlTable += `
                 <tr>
                     <td style="font-weight: bold;">${r.nome}</td>
@@ -1192,7 +1258,7 @@ document.addEventListener('DOMContentLoaded', () => {
         report += `===================================================\n\n`;
 
         report += `WALK / PRIMEIRA RONDA (4 SETORES: ATRIUM, MDT, PSA, PSI):\n`;
-        ronda.forEach(r => {
+        rondaCritica.forEach(r => {
             report += `  • ${r.nome}: [${r.status}] ${r.status === 'PENDENTE' ? '- ' + r.obs : ''} (${r.validado})\n`;
         });
         report += `\n---------------------------------------------------\n\n`;
