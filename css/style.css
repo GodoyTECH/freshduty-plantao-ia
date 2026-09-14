@@ -380,6 +380,19 @@ body.theme-dark .ronda-select, body.theme-dark .ronda-input {
 .ronda-optional-toggle input { width: 20px; height: 20px; }
 .ronda-equipment-title { display: block; font-size: 0.88rem; }
 .ronda-na { color: var(--text-muted); font-size: 0.78rem; }
+.ronda-floor-validator {
+    margin-top: 12px;
+    padding: 12px;
+    border: 1px solid rgba(20, 184, 166, 0.42);
+    border-radius: 8px;
+    background: rgba(20, 184, 166, 0.08);
+}
+.ronda-validator-warning {
+    margin: 8px 0 0;
+    color: var(--accent-amber);
+    font-size: 0.78rem;
+    line-height: 1.35;
+}
 
 .app-footer {
     padding: 0 1rem 1.5rem;
